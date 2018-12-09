@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The Longest At-Bat | A Game by Joshua DeGrasse-Baumann</title>
+<meta name="description" content="Can you beat the record for longest at-bat? Find out in this simulation!">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="canonical" href="https://jdegbau.com/games/the-longest-at-bat/">
+<link type="text/css" rel="stylesheet" href="css/LongestAtBat.css" />
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-NM6JBXF');</script>
+<!-- End Google Tag Manager -->
+</head>
+
+<body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-NM6JBXF"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+<noscript><div id="noJS">Whoops! This game requires JavaScript in order to function. Please enable JavaScript and try again.</div></noscript>
+<h1 id="title">The Longest At-Bat</h1>
+<div id="game">
+<div id="gameContent">
+<p>In 1988, Bartolo Colon and Ricky Guiterrez set the known record for the longest at-bat in Major League baseball. The at-bat took 20 pitches and ended with Gutierrez striking out.</p>
+
+<p>Can you beat that record?</p>
+
+<button id="startGame" onclick="startGame()">Let's Find Out!</button>
+
+</div> <!-- #gameContent -->
+
+<div id="swingOptions"></div> <!-- #swingOptions -->
+<div id="scoreboard">
+<div id="balls"><p class="scoreboardSection">BALLS</p><p id="ball1" class="ball"></span><p id="ball2" class="ball"></p><p id="ball3" class="ball"></p></div>
+<div id="strikes"><p class="scoreboardSection">STRIKES</p><p id="strike1" class="strike"></p><p id="strike2" class="strike"></p></div>
+<div id="pitches"><p class="scoreboardSection">PITCHES</p><p id="pitchCount">0</p></div>
+
+</div> <!-- #scoreboard -->
+</div> <!-- #game -->
+
+
+
+<footer>
+<p>Notice an issue? Please let me know by <a href="https://jdegbau.com/longest-at-bat-bug-report/">filling out a bug report</a>!
+<p>Version 0.0.1</p>
+</footer>
+<script type="text/javascript" src="js/jquery-3.2.1.min.js"></script>
+<script type="text/javascript" src="js/LongestAtBat.js"></script>
+</body>

@@ -1,0 +1,177 @@
+/* Overall Styles */
+div#game {
+	width: 75%;
+    margin: 25px auto;
+    position: relative;
+    border: 1px solid;
+    padding: 25px;
+}
+
+/* Scoreboard */
+
+#scoreboard {
+	width: 10%;
+    text-align: center;
+    border: black 1px solid;
+	position: absolute;
+	top: -1px;
+	right: -11%
+}
+
+p.scoreboardSection {
+	margin: 0;
+	border-top: 1px black solid;
+	background: lightgrey;
+	border-bottom: 1px black solid;
+}
+
+.ball {
+    width: 15px;
+    height: 15px;
+    border: 1px blue solid;
+    -moz-border-radius: 50px;
+    -webkit-border-radius: 50px;
+    border-radius: 50px;
+	display: inline-block;
+	margin: 5px 5px;
+}
+
+.strike {
+    width: 15px;
+    height: 15px;
+    border: 1px blue solid;
+    -moz-border-radius: 50px;
+    -webkit-border-radius: 50px;
+    border-radius: 50px;
+	display: inline-block;
+	margin: 5px 5px;
+}
+
+.active {
+	background: red;
+}
+
+p#pitchCount {
+	font-size: 2em;
+	margin: 0 auto;
+}
+
+/* End Scoreboard */
+
+/* Game start screen */
+
+h1#title {
+	display: block;
+	margin: 0 auto;
+}
+
+button {
+    display: block;
+    width: 75%;
+	margin: 0 auto;
+    font-size: 1.5em;
+	cursor: pointer;
+    font-weight: bolder;
+    font-family: -apple-system,sans-serif;
+    -webkit-appearance: none;
+    color: #f7f4f1;
+    background-color: #626160;
+    border: none;
+    -webkit-border-radius: 0.5em;
+    -moz-border-radius: 0.5em;
+    border-radius: 0.5em;
+}
+
+button:hover {
+	color: #E4DED8;
+}
+
+button[disabled] {
+	background: red;
+	cursor: wait;
+}
+
+button#resetGame {
+	margin: 1em auto;
+}
+
+/* End game start screen */
+
+div#gameOver {
+	border: 2px dashed darkgrey;
+    width: 80%;
+    text-align: center;
+    padding: 0 5%;
+    margin: 0 auto;
+    border-radius: 10px;
+}
+
+/* Cookie Consent Bar Styling */
+
+
+
+div#cookie-consent {
+    width: 100%;
+    z-index: 101;
+    background: rgb(35, 122, 252);
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    color: white;
+    display: flex;
+    transition: all 1.5s;
+	-webkit-box-shadow: 0px -1px 10px -1px rgba(0,0,0,0.75);
+	-moz-box-shadow: 0px -1px 10px -1px rgba(0,0,0,0.75);
+	box-shadow: 0px -1px 10px -1px rgba(0,0,0,0.75);
+}
+
+
+
+span#cookie-consent-description {
+    width: 90%;
+    display: inline-block;
+    padding: 10px;
+}
+
+
+
+button#cookie-consent-accept {
+    width: 20%;
+    display: inline-block;
+    background: rgb(255, 255, 255);
+    padding: 10px;
+    font-weight: bold;
+    text-align: center;
+    text-decoration: none;
+	cursor: pointer;
+	border: none;
+	border-radius: 0;
+	font-size: 1em;
+	color: #14146c;
+}
+
+#cookie-consent a {
+    color: white;
+}
+
+#cookie-consent a:hover {
+    color: #e6af2e;
+}
+
+@media (max-width: 1048px) {
+	div#game {
+		width: 90%;
+		padding-left: 5%;
+		padding-right: 5%;
+	}
+	#scoreboard {
+		bottom: -100%;
+		left: 0;
+		right: initial;
+		top: initial;
+		width: 100%;
+	}
+	footer {
+		display: none;
+	}
+}
