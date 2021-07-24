@@ -87,6 +87,7 @@ function gameOver(reason) {
 		dataLayer.push({ 'event': 'gameEnd', 'gameEndResult': 'Hit by Pitch' }); 
 		gameContentArea.innerHTML += "<p>If it's any consolation, you only had a 0.23% chance to get hit by a pitch for every pitch you saw. That's pretty impressive.</p>";
 	}
+    sendHighScore(pitches);
 	gameContentArea.innerHTML += "<button id='resetGame' onclick='resetGame()'>Want to try again?</button>";
 }
 
@@ -250,5 +251,25 @@ function resetGame() {
 	wasHit = false;
 	resetCount();
 	updateCount();
+	getHighScore();
 	startGame();
+}
+
+function sendHighScore(pitches) {
+	if (pitches == "") {
+	  return;
+	}
+	const xhttp = new XMLHttpRequest();
+	xhttp.open("GET", "sendscore.php?pitches="+pitches);
+	xhttp.send();
+	getHighScore();
+  }
+
+function getHighScore() {
+  const xhttp = new XMLHttpRequest();
+  xhttp.onload = function() {
+    document.getElementById("high-score").innerHTML = this.responseText;
+  }
+  xhttp.open("GET", "getscore.php");
+  xhttp.send();
 }

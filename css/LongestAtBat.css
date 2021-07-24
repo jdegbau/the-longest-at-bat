@@ -23,6 +23,11 @@ p.scoreboardSection {
 	border-top: 1px black solid;
 	background: lightgrey;
 	border-bottom: 1px black solid;
+    text-transform: uppercase;
+}
+
+#bases {
+    height: 75px;
 }
 
 .ball {
@@ -54,6 +59,37 @@ p.scoreboardSection {
 p#pitchCount {
 	font-size: 2em;
 	margin: 0 auto;
+}
+
+.diamond {
+    width: 0;
+    height: 0;
+    border: 15px solid transparent;
+    border-bottom-color: lightgray;
+    position: relative;
+    
+  }
+.diamond:after {
+    content: '';
+    position: absolute;
+    left: -15px;
+    top: 33px;
+    width: 0;
+    height: 0;
+    border: 15px solid transparent;
+    border-top-color: lightgray;
+}
+
+.diamond.first {
+    left: 10px;
+}
+
+.diamond.second {
+    top: -15px;
+}
+
+.diamond.third {
+    left: -10px;
 }
 
 /* End Scoreboard */
@@ -108,8 +144,6 @@ div#gameOver {
 
 /* Cookie Consent Bar Styling */
 
-
-
 div#cookie-consent {
     width: 100%;
     z-index: 101;
@@ -125,15 +159,11 @@ div#cookie-consent {
 	box-shadow: 0px -1px 10px -1px rgba(0,0,0,0.75);
 }
 
-
-
 span#cookie-consent-description {
     width: 90%;
     display: inline-block;
     padding: 10px;
 }
-
-
 
 button#cookie-consent-accept {
     width: 20%;
