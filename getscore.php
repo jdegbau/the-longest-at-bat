@@ -1,8 +1,8 @@
 <?php
 $servername = "localhost";
-$username = "foxadopt_wp37";
-$password = "8]5r3pL[S7";
-$dbname = "db1hwkgkg0jiwi";
+$username = "${{ secrets.dbuser }}";
+$password = "${{ secrets.dbpass }}";
+$dbname = "${{ secrets.dbname }}";
 
 // Create connection
 $conn = new mysqli($servername, $username, $password, $dbname);
