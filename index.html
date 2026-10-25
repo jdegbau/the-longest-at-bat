@@ -27,10 +27,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <main id="game">
 <div id="scoreboard">
 <div id="linescore">
-<div class="team"><span class="teamName">Away</span><span id="awayRuns" class="runs">0</span></div>
-<div class="team"><span class="teamName">Home</span><span class="runs">0</span></div>
+<div id="awayTeam" class="team batting"><span class="teamName">Away</span><span id="awayRuns" class="runs">0</span></div>
+<div id="homeTeam" class="team"><span class="teamName">Home</span><span id="homeRuns" class="runs">0</span></div>
 </div> <!-- #linescore -->
-<div id="inning"><span class="inningArrow" aria-hidden="true">&#9650;</span> 1st</div>
+<div id="inning"><span id="inningArrow" class="inningArrow" aria-hidden="true">&#9650;</span> <span id="inningLabel">1st</span></div>
 <div id="bases" aria-label="Bases empty" role="img"><span id="base2" class="base second"></span><span id="base3" class="base third"></span><span id="base1" class="base first"></span></div>
 <div id="count">
 <div id="balls"><span class="countLabel">B</span><span id="ball1" class="ball"></span><span id="ball2" class="ball"></span><span id="ball3" class="ball"></span></div>
@@ -44,7 +44,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
 <div id="field">
 <section id="matchup" aria-label="Matchup">
-<div class="player"><span class="playerRole">At Bat</span><span class="playerName">You</span><span id="batterLine" class="playerLine">Count: 0-0</span></div>
+<div class="player"><span class="playerRole">At Bat</span><span id="batterName" class="playerName">You</span><span id="batterLine" class="playerLine">Count: 0-0</span></div>
 <div class="player"><span class="playerRole">Pitching</span><span class="playerName">Opponent</span><span id="pitcherLine" class="playerLine">P: 0</span></div>
 </section> <!-- #matchup -->
 

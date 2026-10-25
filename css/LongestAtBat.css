@@ -59,11 +59,22 @@ main#game {
 
 #linescore .team {
 	display: flex;
+	padding-left: 12px;
 	justify-content: space-between;
 	gap: 16px;
 	min-width: 90px;
 	font-weight: bold;
 	text-transform: uppercase;
+}
+
+#linescore .team.batting .teamName::before {
+	content: "";
+	display: inline-block;
+	width: 6px;
+	height: 6px;
+	margin: 0 6px 2px -12px;
+	border-radius: 50%;
+	background: var(--runner);
 }
 
 #linescore .runs {
@@ -323,6 +334,13 @@ main#game {
 
 #gameContent > p:first-child {
 	margin-top: 0;
+}
+
+p.situation {
+	padding: 8px 12px;
+	border-radius: 6px;
+	background: var(--panel);
+	font-weight: bold;
 }
 
 p.pitchResult {
