@@ -1,145 +1,725 @@
 /* Overall Styles */
-div#game {
-	width: 75%;
-    margin: 25px auto;
-    position: relative;
-    border: 1px solid;
-    padding: 25px;
+:root {
+	--bg: #0b1520;
+	--panel: #15212e;
+	--panel-raised: #1c2b3b;
+	--border: #2a3b4f;
+	--text: #e9eef4;
+	--muted: #95a4b6;
+	--ball: #3fbf6f;
+	--strike: #e5484d;
+	--in-play: #3e8ef7;
+	--out: #f5a524;
+	--runner: #f5c518;
+	--link: #7cb7ff;
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+body {
+	margin: 0;
+	padding: 0 16px;
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+	line-height: 1.5;
+	color: var(--text);
+	background: var(--bg);
+}
+
+a {
+	color: var(--link);
+}
+
+h1#title {
+	margin: 0.67em auto 0.5em;
+	text-align: center;
+	letter-spacing: 0.02em;
+}
+
+main#game {
+	max-width: 1100px;
+	margin: 0 auto 25px;
 }
 
 /* Scoreboard */
 
 #scoreboard {
-	width: 10%;
-    text-align: center;
-    border: black 1px solid;
-	position: absolute;
-	top: -1px;
-	right: -11%
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 24px;
+	padding: 12px 20px;
+	background: var(--panel-raised);
+	border: 1px solid var(--border);
+	border-radius: 10px 10px 0 0;
 }
 
-p.scoreboardSection {
-	margin: 0;
-	border-top: 1px black solid;
-	background: lightgrey;
-	border-bottom: 1px black solid;
-    text-transform: uppercase;
+#linescore .team {
+	display: flex;
+	padding-left: 12px;
+	justify-content: space-between;
+	gap: 16px;
+	min-width: 90px;
+	font-weight: bold;
+	text-transform: uppercase;
+}
+
+#linescore .team.batting .teamName::before {
+	content: "";
+	display: inline-block;
+	width: 6px;
+	height: 6px;
+	margin: 0 6px 2px -12px;
+	border-radius: 50%;
+	background: var(--runner);
+}
+
+#linescore .runs {
+	font-variant-numeric: tabular-nums;
+}
+
+#inning {
+	font-weight: bold;
+	color: var(--muted);
+}
+
+.inningArrow {
+	font-size: 0.7em;
+	color: var(--text);
 }
 
 #bases {
-    height: 75px;
+	position: relative;
+	width: 48px;
+	height: 36px;
+	flex: none;
 }
 
-.ball {
-    width: 15px;
-    height: 15px;
-    border: 1px blue solid;
-    -moz-border-radius: 50px;
-    -webkit-border-radius: 50px;
-    border-radius: 50px;
-	display: inline-block;
-	margin: 5px 5px;
+.base {
+	position: absolute;
+	width: 14px;
+	height: 14px;
+	border: 2px solid var(--muted);
+	transform: rotate(45deg);
 }
 
-.strike {
-    width: 15px;
-    height: 15px;
-    border: 1px blue solid;
-    -moz-border-radius: 50px;
-    -webkit-border-radius: 50px;
-    border-radius: 50px;
-	display: inline-block;
-	margin: 5px 5px;
+.base.second {
+	left: 17px;
+	top: 3px;
 }
 
-.active {
-	background: red;
+.base.third {
+	left: 5px;
+	top: 15px;
 }
 
-p#pitchCount {
-	font-size: 2em;
-	margin: 0 auto;
+.base.first {
+	left: 29px;
+	top: 15px;
 }
 
-.diamond {
-    width: 0;
-    height: 0;
-    border: 15px solid transparent;
-    border-bottom-color: lightgray;
-    position: relative;
-    
-  }
-.diamond:after {
-    content: '';
-    position: absolute;
-    left: -15px;
-    top: 33px;
-    width: 0;
-    height: 0;
-    border: 15px solid transparent;
-    border-top-color: lightgray;
+.base.occupied {
+	background: var(--runner);
+	border-color: var(--runner);
 }
 
-.diamond.first {
-    left: 10px;
+#count > div {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	height: 18px;
 }
 
-.diamond.second {
-    top: -15px;
+.countLabel {
+	width: 12px;
+	font-size: 0.75em;
+	font-weight: bold;
+	color: var(--muted);
 }
 
-.diamond.third {
-    left: -10px;
+.ball,
+.strike,
+.out {
+	width: 11px;
+	height: 11px;
+	border: 1px solid var(--muted);
+	border-radius: 50%;
+}
+
+.ball.active {
+	background: var(--ball);
+	border-color: var(--ball);
+}
+
+.strike.active {
+	background: var(--strike);
+	border-color: var(--strike);
+}
+
+.out.active {
+	background: var(--out);
+	border-color: var(--out);
+}
+
+.stat {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+.statLabel {
+	font-size: 0.7em;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--muted);
+}
+
+.statValue {
+	font-size: 1.4em;
+	font-weight: bold;
+	font-variant-numeric: tabular-nums;
 }
 
 /* End Scoreboard */
 
-/* Game start screen */
+/* Field: matchup, strike zone, play and pitch log */
 
-h1#title {
+#field {
+	display: grid;
+	grid-template-columns: 240px minmax(0, 1fr) 300px;
+	grid-template-areas:
+		"matchup play log"
+		"zone play log"
+		"hit play log";
+	grid-template-rows: auto auto 1fr;
+	gap: 16px;
+	padding: 16px;
+	background: var(--panel);
+	border: 1px solid var(--border);
+	border-top: none;
+	border-radius: 0 0 10px 10px;
+}
+
+#field section {
+	background: var(--panel-raised);
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	padding: 12px;
+}
+
+#matchup {
+	grid-area: matchup;
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 10px;
+}
+
+#arsenal {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px 6px;
+}
+
+.arsenalPitch {
+	padding: 1px 8px;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	font-size: 0.72em;
+	color: var(--muted);
+	background: var(--panel);
+}
+
+.player {
+	display: flex;
+	flex-direction: column;
+}
+
+.playerRole {
+	font-size: 0.7em;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--muted);
+}
+
+.playerName {
+	font-weight: bold;
+}
+
+.playerLine {
+	font-size: 0.85em;
+	color: var(--muted);
+}
+
+#zonePanel {
+	grid-area: zone;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+}
+
+#strikeZone {
 	display: block;
+	width: 100%;
+	max-width: 240px;
 	margin: 0 auto;
 }
 
-button {
-    display: block;
-    width: 75%;
+.zoneBox {
+	fill: rgba(255, 255, 255, 0.04);
+	stroke: var(--text);
+	stroke-width: 1.5;
+}
+
+.zoneGrid {
+	stroke: var(--border);
+	stroke-width: 1;
+}
+
+.homePlate {
+	fill: none;
+	stroke: var(--muted);
+	stroke-width: 1.5;
+}
+
+.pitchPath {
+	stroke: var(--muted);
+	stroke-width: 1.5;
+	stroke-dasharray: 3 4;
+	opacity: 0.7;
+}
+
+.pitchMark.latest {
+	transform-box: fill-box;
+	transform-origin: center;
+	animation: markPop 0.35s ease-out;
+}
+
+@keyframes markPop {
+	from {
+		transform: scale(0.2);
+		opacity: 0;
+	}
+	to {
+		transform: scale(1);
+		opacity: 1;
+	}
+}
+
+.pitchMark circle {
+	stroke: var(--panel-raised);
+	stroke-width: 1.5;
+}
+
+.pitchMark.latest circle {
+	stroke: #fff;
+	stroke-width: 2.5;
+}
+
+.pitchMark text {
+	fill: #fff;
+	font-size: 10px;
+	font-weight: bold;
+	text-anchor: middle;
+}
+
+.pitchMark.ballColor circle {
+	fill: var(--ball);
+}
+
+.pitchMark.strikeColor circle {
+	fill: var(--strike);
+}
+
+.pitchMark.inPlayColor circle {
+	fill: var(--in-play);
+}
+
+#zoneLegend {
+	display: flex;
+	justify-content: center;
+	gap: 14px;
+	margin: 8px 0 0;
+	padding: 0;
+	list-style: none;
+	font-size: 0.8em;
+	color: var(--muted);
+}
+
+.legendDot {
+	display: inline-block;
+	width: 10px;
+	height: 10px;
+	margin-right: 5px;
+	border-radius: 50%;
+}
+
+.ballColor {
+	background: var(--ball);
+}
+
+.strikeColor {
+	background: var(--strike);
+}
+
+.inPlayColor {
+	background: var(--in-play);
+}
+
+#hitPanel {
+	grid-area: hit;
+	align-self: start;
+}
+
+#hitPanel h2 {
+	margin: 0 0 8px;
+	font-size: 0.8em;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--muted);
+}
+
+#fieldView {
+	display: block;
+	width: 100%;
+	max-width: 280px;
 	margin: 0 auto;
-    font-size: 1.5em;
+}
+
+#fieldView .grass {
+	fill: #17352a;
+}
+
+#fieldView .infieldDirt {
+	fill: #3b2f25;
+	stroke: #3b2f25;
+	stroke-width: 14;
+	stroke-linejoin: round;
+}
+
+#fieldView .fence {
+	fill: none;
+	stroke: var(--muted);
+	stroke-width: 2;
+}
+
+#fieldView .foulLine {
+	stroke: rgba(255, 255, 255, 0.5);
+	stroke-width: 1;
+}
+
+#fieldView .fieldBase {
+	fill: var(--text);
+}
+
+#fieldView .fieldBase.occupied {
+	fill: var(--runner);
+}
+
+#fieldView .homePlate {
+	fill: var(--text);
+}
+
+#fieldView .fielders circle {
+	fill: rgba(255, 255, 255, 0.55);
+}
+
+.hitPath {
+	stroke: #fff;
+	stroke-width: 1.5;
+	stroke-dasharray: 4 3;
+	opacity: 0.8;
+}
+
+.hitDot {
+	stroke: #fff;
+	stroke-width: 1.5;
+}
+
+.hitDot.hit {
+	fill: var(--in-play);
+}
+
+.hitDot.out {
+	fill: var(--out);
+}
+
+.hitDot.homer {
+	fill: var(--runner);
+}
+
+.hitRing {
+	fill: none;
+	stroke: var(--runner);
+	stroke-width: 1.5;
+}
+
+#hitInfo {
+	margin: 8px 0 0;
+	text-align: center;
+	font-size: 0.78em;
+	font-weight: bold;
+}
+
+#playPanel {
+	grid-area: play;
+}
+
+#gameContent > p:first-child {
+	margin-top: 0;
+}
+
+p.situation {
+	padding: 8px 12px;
+	border-radius: 6px;
+	background: var(--panel);
+	font-weight: bold;
+}
+
+p.pitchResult {
+	font-weight: bold;
+	font-size: 1.25em;
+}
+
+h3#swingOptionsHeading {
+	font-size: 1em;
+	color: var(--muted);
+}
+
+#swingOptions h3 {
+	margin: 12px 0 8px;
+}
+
+#incomingPitch {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 12px;
+	padding: 10px 12px;
+	border: 1px solid var(--border);
+	border-radius: 6px;
+	background: var(--panel);
+}
+
+.incomingHeading {
+	font-weight: bold;
+}
+
+.readChip {
+	padding: 2px 10px;
+	border-radius: 999px;
+	font-size: 0.85em;
+	font-weight: bold;
+	color: #fff;
+}
+
+.readChip.read-strike {
+	background: var(--strike);
+}
+
+.readChip.read-border {
+	background: var(--out);
+	color: #1a1204;
+}
+
+.readChip.read-ball {
+	background: var(--ball);
+}
+
+#optionButtons,
+#batterChoices {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 10px;
+}
+
+#batterChoices {
+	margin-top: 12px;
+	grid-template-columns: 1fr;
+}
+
+button.swingOption,
+button.batterChoice {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 2px;
+	padding: 0.55em 0.75em;
+	text-align: left;
+}
+
+button.swingOption small,
+button.batterChoice small {
+	font-size: 0.75em;
+	font-weight: normal;
+	color: var(--muted);
+}
+
+p.ticker {
+	margin: 0.5em 0 0;
+	padding-left: 10px;
+	border-left: 3px solid var(--in-play);
+	font-style: italic;
+	color: var(--muted);
+}
+
+p.umpire {
+	margin: 0.5em 0 0;
+	padding-left: 10px;
+	border-left: 3px solid var(--out);
+	color: var(--out);
+}
+
+#pitchLogPanel {
+	grid-area: log;
+	max-height: 560px;
+	overflow-y: auto;
+}
+
+#pitchLogPanel h2 {
+	margin: 0 0 8px;
+	font-size: 0.8em;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--muted);
+}
+
+#pitchLog {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+#pitchLogEmpty {
+	margin: 0;
+	color: var(--muted);
+	font-size: 0.9em;
+}
+
+.pitchLogEntry {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 8px 0;
+	border-top: 1px solid var(--border);
+}
+
+.pitchLogEntry:first-child {
+	border-top: none;
+}
+
+.pitchNumber {
+	flex: none;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	border-radius: 50%;
+	font-size: 0.75em;
+	font-weight: bold;
+	color: #fff;
+}
+
+.pitchDetails {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	min-width: 0;
+}
+
+.pitchDescription {
+	font-weight: bold;
+	font-size: 0.9em;
+}
+
+.missedCall {
+	margin-left: 8px;
+	padding: 0 6px;
+	border-radius: 4px;
+	font-size: 0.75em;
+	background: var(--out);
+	color: #1a1204;
+}
+
+.pitchInfo.hitStats {
+	color: var(--text);
+}
+
+.pitchInfo {
+	font-size: 0.8em;
+	color: var(--muted);
+}
+
+.pitchCount {
+	font-size: 0.85em;
+	font-variant-numeric: tabular-nums;
+	color: var(--muted);
+}
+
+/* End field */
+
+/* Buttons */
+
+button {
+	display: block;
+	width: 100%;
+	margin: 0;
+	padding: 0.6em 0.75em;
+	font-size: 1em;
 	cursor: pointer;
-    font-weight: bolder;
-    font-family: -apple-system,sans-serif;
-    -webkit-appearance: none;
-    color: #f7f4f1;
-    background-color: #626160;
-    border: none;
-    -webkit-border-radius: 0.5em;
-    -moz-border-radius: 0.5em;
-    border-radius: 0.5em;
+	font-weight: bold;
+	font-family: inherit;
+	-webkit-appearance: none;
+	appearance: none;
+	color: var(--text);
+	background-color: var(--panel);
+	border: 1px solid var(--border);
+	border-radius: 6px;
 }
 
 button:hover {
-	color: #E4DED8;
+	border-color: var(--in-play);
+}
+
+button:focus-visible {
+	outline: 2px solid var(--in-play);
+	outline-offset: 2px;
 }
 
 button[disabled] {
-	background: red;
+	opacity: 0.4;
 	cursor: wait;
 }
 
+button#startGame,
 button#resetGame {
-	margin: 1em auto;
+	max-width: 320px;
+	margin: 1em auto 0;
+	font-size: 1.15em;
+	color: #fff;
+	background: var(--in-play);
+	border-color: var(--in-play);
 }
 
-/* End game start screen */
+/* End buttons */
 
 div#gameOver {
-	border: 2px dashed darkgrey;
-    width: 80%;
-    text-align: center;
-    padding: 0 5%;
-    margin: 0 auto;
-    border-radius: 10px;
+	border: 1px solid var(--border);
+	border-left: 4px solid var(--runner);
+	background: var(--panel);
+	padding: 0 16px;
+	margin: 1em 0 0;
+	border-radius: 6px;
+}
+
+footer {
+	max-width: 1100px;
+	margin: 0 auto 25px;
+	text-align: center;
+	color: var(--muted);
 }
 
 /* Cookie Consent Bar Styling */
@@ -188,20 +768,64 @@ button#cookie-consent-accept {
     color: #e6af2e;
 }
 
-@media (max-width: 1048px) {
-	div#game {
-		width: 90%;
-		padding-left: 5%;
-		padding-right: 5%;
+@media (max-width: 960px) {
+	#field {
+		grid-template-columns: 240px minmax(0, 1fr);
+		grid-template-areas:
+			"matchup play"
+			"zone play"
+			"hit play"
+			"log log";
 	}
+	#pitchLogPanel {
+		max-height: none;
+	}
+}
+
+@media (max-width: 640px) {
 	#scoreboard {
-		bottom: -100%;
-		left: 0;
-		right: initial;
-		top: initial;
-		width: 100%;
+		justify-content: space-between;
+		gap: 10px 12px;
+		padding: 10px 12px;
 	}
-	footer {
-		display: none;
+	.statValue {
+		font-size: 1.1em;
+	}
+	#field {
+		grid-template-columns: minmax(0, 1fr);
+		grid-template-areas:
+			"matchup"
+			"zone"
+			"play"
+			"hit"
+			"log";
+		gap: 12px;
+		padding: 12px;
+	}
+	#strikeZone {
+		max-width: 200px;
+	}
+	#optionButtons {
+		grid-template-columns: 1fr;
+	}
+	#matchup {
+		grid-template-columns: 1fr 1fr;
+	}
+	#arsenal {
+		grid-column: 1 / -1;
+	}
+	div#cookie-consent {
+		flex-direction: column;
+	}
+	span#cookie-consent-description,
+	button#cookie-consent-accept {
+		width: 100%;
+		margin: 0;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.pitchMark.latest {
+		animation: none;
 	}
 }

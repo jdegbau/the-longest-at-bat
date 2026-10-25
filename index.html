@@ -6,7 +6,7 @@
 <meta name="description" content="Can you beat the record for longest at-bat? Find out in this simulation!">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="canonical" href="https://jdegbau.com/games/the-longest-at-bat/">
-<link type="text/css" rel="stylesheet" href="css/LongestAtBat.css" />
+<link type="text/css" rel="stylesheet" href="css/LongestAtBat.css">
 <!-- Google Tag Manager -->
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
 new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -23,32 +23,97 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <!-- End Google Tag Manager (noscript) -->
 <noscript><div id="noJS">Whoops! This game requires JavaScript in order to function. Please enable JavaScript and try again.</div></noscript>
 <h1 id="title">The Longest At-Bat</h1>
-<div id="game">
-<div id="gameContent">
-<p>In 1988, Bartolo Colon and Ricky Guiterrez set the known record for the longest at-bat in Major League baseball. The at-bat took 20 pitches and ended with Gutierrez striking out.</p>
+
+<main id="game">
+<div id="scoreboard">
+<div id="linescore">
+<div id="awayTeam" class="team batting"><span class="teamName">Away</span><span id="awayRuns" class="runs">0</span></div>
+<div id="homeTeam" class="team"><span class="teamName">Home</span><span id="homeRuns" class="runs">0</span></div>
+</div> <!-- #linescore -->
+<div id="inning"><span id="inningArrow" class="inningArrow" aria-hidden="true">&#9650;</span> <span id="inningLabel">1st</span></div>
+<div id="bases" aria-label="Bases empty" role="img"><span id="base2" class="base second"></span><span id="base3" class="base third"></span><span id="base1" class="base first"></span></div>
+<div id="count">
+<div id="balls"><span class="countLabel">B</span><span id="ball1" class="ball"></span><span id="ball2" class="ball"></span><span id="ball3" class="ball"></span></div>
+<div id="strikes"><span class="countLabel">S</span><span id="strike1" class="strike"></span><span id="strike2" class="strike"></span></div>
+<div id="outs"><span class="countLabel">O</span><span id="out1" class="out"></span><span id="out2" class="out"></span></div>
+</div> <!-- #count -->
+<div class="stat"><span class="statLabel">Pitches</span><span id="pitchCount" class="statValue">0</span></div>
+<div class="stat"><span class="statLabel">Est. Time</span><span id="atBatTime" class="statValue">0:00</span></div>
+<div class="stat"><span class="statLabel">Record</span><span id="recordPitches" class="statValue">21</span></div>
+</div> <!-- #scoreboard -->
+
+<div id="field">
+<section id="matchup" aria-label="Matchup">
+<div class="player"><span class="playerRole">At Bat</span><span id="batterName" class="playerName">You</span><span id="batterType" class="playerLine"></span><span id="batterLine" class="playerLine">Count: 0-0</span></div>
+<div class="player"><span class="playerRole">Pitching</span><span id="pitcherName" class="playerName">Opponent</span><span id="pitcherType" class="playerLine"></span><span id="pitcherLine" class="playerLine">P: 0</span></div>
+<div id="arsenal" aria-label="Pitch mix"></div>
+</section> <!-- #matchup -->
+
+<section id="zonePanel" aria-label="Strike zone">
+<svg id="strikeZone" viewBox="0 0 200 240" role="img" aria-label="Pitch locations from the catcher's view">
+<rect class="zoneBox" x="60" y="60" width="80" height="110"></rect>
+<line class="zoneGrid" x1="86.7" y1="60" x2="86.7" y2="170"></line>
+<line class="zoneGrid" x1="113.3" y1="60" x2="113.3" y2="170"></line>
+<line class="zoneGrid" x1="60" y1="96.7" x2="140" y2="96.7"></line>
+<line class="zoneGrid" x1="60" y1="133.3" x2="140" y2="133.3"></line>
+<polygon class="homePlate" points="70,205 130,205 130,213 100,225 70,213"></polygon>
+<g id="pitchTrail"></g>
+<g id="pitchMarks"></g>
+</svg>
+<ul id="zoneLegend">
+<li><span class="legendDot ballColor"></span>Ball</li>
+<li><span class="legendDot strikeColor"></span>Strike</li>
+<li><span class="legendDot inPlayColor"></span>In play</li>
+</ul>
+</section> <!-- #zonePanel -->
+
+<section id="hitPanel" aria-label="Hit location" hidden>
+<h2>Hit Location</h2>
+<svg id="fieldView" viewBox="0 0 300 245" role="img" aria-label="Where the ball was hit">
+<path class="grass" d="M150 225 L16 91 A190 190 0 0 1 284 91 Z"></path>
+<polygon class="infieldDirt" points="150,225 184,191 150,157 116,191"></polygon>
+<line class="foulLine" x1="150" y1="225" x2="16" y2="91"></line>
+<line class="foulLine" x1="150" y1="225" x2="284" y2="91"></line>
+<path class="fence" d="M16 91 A190 190 0 0 1 284 91"></path>
+<rect id="fieldBase2" class="fieldBase" x="145.5" y="152.5" width="9" height="9" transform="rotate(45 150 157)"></rect>
+<rect id="fieldBase3" class="fieldBase" x="111.5" y="186.5" width="9" height="9" transform="rotate(45 116 191)"></rect>
+<rect id="fieldBase1" class="fieldBase" x="179.5" y="186.5" width="9" height="9" transform="rotate(45 184 191)"></rect>
+<polygon class="homePlate" points="146,223 154,223 154,228 150,231 146,228"></polygon>
+<g class="fielders">
+<circle cx="150" cy="198" r="3.5"></circle><circle cx="150" cy="237" r="3.5"></circle>
+<circle cx="190" cy="185" r="3.5"></circle><circle cx="172" cy="160" r="3.5"></circle>
+<circle cx="128" cy="160" r="3.5"></circle><circle cx="110" cy="186" r="3.5"></circle>
+<circle cx="68" cy="100" r="3.5"></circle><circle cx="150" cy="72" r="3.5"></circle><circle cx="232" cy="100" r="3.5"></circle>
+</g>
+<g id="hitMarks"></g>
+</svg>
+<p id="hitInfo"></p>
+</section> <!-- #hitPanel -->
+
+<section id="playPanel" aria-label="Current play">
+<div id="gameContent" aria-live="polite">
+<p>On April 22, 2018, Brandon Belt of the San Francisco Giants set the record for the longest at-bat in Major League Baseball. Facing Jaime Barría of the Los Angeles Angels, Belt fouled off 16 pitches and saw 21 in all before flying out. He broke the 20-pitch record Ricky Gutierrez set against Bartolo Colón in 1998.</p>
 
 <p>Can you beat that record?</p>
 
-<button id="startGame" onclick="startGame()">Let's Find Out!</button>
-
+<button id="startGame" type="button">Let's Find Out!</button>
 </div> <!-- #gameContent -->
 
 <div id="swingOptions"></div> <!-- #swingOptions -->
-<div id="scoreboard">
-<div id="balls"><p class="scoreboardSection">Balls</p><p id="ball1" class="ball"></span><p id="ball2" class="ball"></p><p id="ball3" class="ball"></p></div>
-<div id="strikes"><p class="scoreboardSection">Strikes</p><p id="strike1" class="strike"></p><p id="strike2" class="strike"></p></div>
-<div id="pitches"><p class="scoreboardSection">Pitches</p><p id="pitchCount">0</p></div>
-<div id="bases"><p class="scoreboardSection">Bases</p><span class="diamond first"></span><span class="diamond second"></span><span class="diamond third"></span></div>
+</section> <!-- #playPanel -->
 
-</div> <!-- #scoreboard -->
-</div> <!-- #game -->
-
-
+<section id="pitchLogPanel" aria-label="Pitch by pitch">
+<h2>Pitch by Pitch</h2>
+<ol id="pitchLog" reversed></ol>
+<p id="pitchLogEmpty">No pitches yet.</p>
+</section> <!-- #pitchLogPanel -->
+</div> <!-- #field -->
+</main> <!-- #game -->
 
 <footer>
-<p>Notice an issue? Please let me know by <a href="https://jdegbau.com/longest-at-bat-bug-report/">filling out a bug report</a>!
-<p>Version 0.0.1</p>
+<p>Notice an issue? Please let me know by <a href="https://jdegbau.com/longest-at-bat-bug-report/">filling out a bug report</a>!</p>
+<p><a href="credits.html">Credits</a> &middot; Version 0.0.1</p>
 </footer>
-<script type="text/javascript" src="js/jquery-3.2.1.min.js"></script>
-<script type="text/javascript" src="js/LongestAtBat.js"></script>
+<script src="js/LongestAtBat.js"></script>
 </body>
+</html>
