@@ -1,10 +1,27 @@
 // Game-wide constants
 var RECORD_PITCHES = 21; // Brandon Belt vs. Jaime Barría, April 22, 2018
-var HIT_BY_PITCH_CHANCE = 0.23; // Percent chance per pitch
-var SECONDS_PER_PITCH_EMPTY = 16; // Approximate MLB average between pitches with the bases empty under the pitch clock
-var SECONDS_PER_PITCH_RUNNERS = 19; // Approximate MLB average between pitches with runners on under the pitch clock
 var NEXT_PITCH_DELAY = 3000; // Milliseconds before the next pitch is delivered
 var RELEASE_POINT = { x: 100, y: 8 }; // Where pitches leave the pitcher's hand in the strike zone view
+var SECONDS_PER_PITCH_EMPTY = 16; // Estimate: 15-second pitch timer with the bases empty
+var SECONDS_PER_PITCH_RUNNERS = 19; // Estimate: 18-second pitch timer with runners on
+
+// League averages from the 2025 MLB regular season. Sources, derivations and the values that are
+// approximations rather than published figures are documented in docs/mlb-averages.md.
+var LEAGUE = {
+	pitches: 710084,
+	plateAppearances: 182838,
+	pitchesPerPA: 3.9,
+	strikeoutRate: 22.2, // Percent of plate appearances
+	walkRate: 8.4,
+	hitByPitchRate: 1.05,
+	homeRunRate: 3.09,
+	onBasePct: 0.315,
+	singleShare: 65.1, // Percent of hits
+	doubleShare: 19.3,
+	tripleShare: 1.6,
+	homeRunShare: 14.1
+};
+var HIT_BY_PITCH_CHANCE = 0.27; // Percent of pitches: 1,928 hit batters in 710,084 pitches
 
 // Game-wide state
 var pitches = 0;
@@ -71,91 +88,154 @@ var approaches = {
 	bunt: { label: "Bunt", hint: "Try to beat it out." }
 };
 
-// Pitch types: velocity range, how much they cut contact, and how much they hide their location out of the hand
+// Pitch types. mean is the league-average velocity, usage the share of all pitches thrown, and whiff the
+// share of swings that miss. deception is how much the pitch hides its location out of the hand.
 var pitchLibrary = {
-	fourSeam: { name: "Four-Seam Fastball", short: "4-Seam", minSpeed: 92, maxSpeed: 98, contact: -0.02, deception: 0, fastball: true },
-	sinker: { name: "Sinker", short: "Sinker", minSpeed: 91, maxSpeed: 96, contact: 0, deception: 0.02, fastball: true },
-	cutter: { name: "Cutter", short: "Cutter", minSpeed: 87, maxSpeed: 92, contact: -0.03, deception: 0.05 },
-	slider: { name: "Slider", short: "Slider", minSpeed: 83, maxSpeed: 89, contact: -0.07, deception: 0.12 },
-	curveball: { name: "Curveball", short: "Curve", minSpeed: 76, maxSpeed: 82, contact: -0.06, deception: 0.15 },
-	changeup: { name: "Changeup", short: "Change", minSpeed: 83, maxSpeed: 89, contact: -0.05, deception: 0.08 },
-	splitter: { name: "Splitter", short: "Splitter", minSpeed: 84, maxSpeed: 90, contact: -0.08, deception: 0.12 }
+	fourSeam: { name: "Four-Seam Fastball", short: "4-Seam", mean: 94.0, usage: 28.3, whiff: 22.5, deception: 0, fastball: true },
+	sinker: { name: "Sinker", short: "Sinker", mean: 92.5, usage: 11.7, whiff: 15, deception: 0.02, fastball: true },
+	cutter: { name: "Cutter", short: "Cutter", mean: 88.5, usage: 9.1, whiff: 24, deception: 0.05 },
+	slider: { name: "Slider", short: "Slider", mean: 84.8, usage: 22.4, whiff: 32, deception: 0.12 },
+	sweeper: { name: "Sweeper", short: "Sweeper", mean: 82.0, usage: 7.5, whiff: 34, deception: 0.12 },
+	curveball: { name: "Curveball", short: "Curve", mean: 80.5, usage: 8.5, whiff: 30, deception: 0.15 },
+	changeup: { name: "Changeup", short: "Change", mean: 85.9, usage: 10.0, whiff: 32, deception: 0.08 },
+	splitter: { name: "Splitter", short: "Splitter", mean: 86.0, usage: 2.5, whiff: 37, deception: 0.12 }
 };
+var LEAGUE_WHIFF = 25.3; // Percent of swings that miss, all pitches
+
+// A pitch's whiff rate relative to the league mix shifts the chance of contact. The league mix averages out to zero.
+(function() {
+	var totalUsage = 0;
+	var weightedWhiff = 0;
+	Object.keys(pitchLibrary).forEach(function(key) {
+		totalUsage += pitchLibrary[key].usage;
+		weightedWhiff += pitchLibrary[key].usage * pitchLibrary[key].whiff;
+	});
+	var mixWhiff = weightedWhiff / totalUsage;
+	Object.keys(pitchLibrary).forEach(function(key) {
+		pitchLibrary[key].contact = -(pitchLibrary[key].whiff - mixWhiff) / 100;
+	});
+})();
 
 // Fictional pitchers
 var pitcherInitials = ["A", "B", "C", "D", "E", "G", "J", "K", "L", "M", "N", "P", "R", "S", "T", "W"];
 var pitcherSurnames = ["Alvarez", "Brennan", "Castillo", "Donovan", "Ellison", "Fontaine", "Gallagher", "Hartwell", "Ibarra", "Jennings", "Kowalski", "Lindgren", "Montoya", "Nakamura", "Okafor", "Prescott", "Quintero", "Ramsey", "Sutherland", "Tavares", "Vasquez", "Whitfield"];
 
-// How often the pitcher throws a strike by count: ZONE_RATE[balls][strikes]
+// How often the pitcher throws a strike by count: ZONE_RATE[balls][strikes]. The first pitch matches the league's
+// 52-55% zone rate; the rest of the shape follows the usual pattern (more strikes when behind in the count,
+// fewer when ahead) with the level set so a league-average hitter sees the 2025 zone rate of 50.6%.
 var ZONE_RATE = [
-	[0.55, 0.48, 0.38],
-	[0.50, 0.48, 0.42],
-	[0.52, 0.52, 0.46],
-	[0.62, 0.56, 0.54]
+	[0.54, 0.48, 0.45],
+	[0.50, 0.48, 0.47],
+	[0.52, 0.51, 0.50],
+	[0.61, 0.57, 0.56]
 ];
+var ZONE_RATE_OFFSET = 0;
 
-// Runner setups and how often each comes up, roughly in line with how often MLB batters see them
-var baseStates = [
-	{ bases: [false, false, false], weight: 40 },
-	{ bases: [true, false, false], weight: 20 },
-	{ bases: [false, true, false], weight: 9 },
-	{ bases: [false, false, true], weight: 4 },
-	{ bases: [true, true, false], weight: 10 },
-	{ bases: [true, false, true], weight: 6 },
-	{ bases: [false, true, true], weight: 4 },
-	{ bases: [true, true, true], weight: 7 }
-];
-
-// Strike zone bounds in the SVG's coordinates (catcher's view; a right-handed batter stands on the left)
+// Where pitches go, in the strike zone view's coordinates (catcher's view; a right-handed batter stands on the
+// left). About 4 units is an inch: the zone is a 20-inch-wide target.
+var UNITS_PER_INCH = 4;
 var zone = { left: 60, right: 140, top: 60, bottom: 170 };
-var heart = { left: 76, right: 124, top: 80, bottom: 150 };
+var SHADOW_WIDTH = 8; // Statcast's "shadow" is the band around the edge of the zone, here 2 inches
+var CHASE_WIDTH = 24; // Beyond the shadow, the "chase" band; past it is the "waste" zone
+var heart = { left: zone.left + SHADOW_WIDTH, right: zone.right - SHADOW_WIDTH, top: zone.top + SHADOW_WIDTH, bottom: zone.bottom - SHADOW_WIDTH };
+var shadowBox = { left: zone.left - SHADOW_WIDTH, right: zone.right + SHADOW_WIDTH, top: zone.top - SHADOW_WIDTH, bottom: zone.bottom + SHADOW_WIDTH };
+var chaseBox = { left: zone.left - CHASE_WIDTH, right: zone.right + CHASE_WIDTH, top: zone.top - CHASE_WIDTH, bottom: zone.bottom + CHASE_WIDTH };
+var plotBox = { left: 14, right: 186, top: 14, bottom: 200 };
 
-// Where a pitch is headed and how likely the player is to read it correctly
+// Pitch locations: Statcast attack zones are heart 27.5%, shadow 42.9%, chase 21.7% and waste 7.85% of pitches.
+// Half of the shadow band is inside the zone ("edge") and half outside ("shadowOut").
+var HEART_SHARE_OF_ZONE = 0.544; // 27.54 of the 50.6 percent of pitches in the zone
+
+// What the player sees out of the hand and how likely each read is for each location
 var READ_ODDS = {
 	heart: { strike: 0.9, border: 0.1, ball: 0 },
-	edge: { strike: 0.3, border: 0.55, ball: 0.15 },
-	chase: { strike: 0.1, border: 0.5, ball: 0.4 },
-	waste: { strike: 0, border: 0.1, ball: 0.9 },
+	edge: { strike: 0.35, border: 0.55, ball: 0.1 },
+	shadowOut: { strike: 0.15, border: 0.55, ball: 0.3 },
+	chase: { strike: 0.05, border: 0.35, ball: 0.6 },
+	waste: { strike: 0, border: 0.05, ball: 0.95 },
 	hbp: { strike: 0, border: 0.1, ball: 0.9 }
 };
-var TRUE_READ = { heart: "strike", edge: "border", chase: "ball", waste: "ball", hbp: "ball" };
+var TRUE_READ = { heart: "strike", edge: "border", shadowOut: "border", chase: "ball", waste: "ball", hbp: "ball" };
 var READ_LABELS = { strike: "Looks like a strike", border: "Borderline pitch", ball: "Looks like a ball" };
 
-// Chance of making contact by approach and pitch location
+// Chance of making contact on a swing by approach and pitch location. A normal swing is set so a league-average
+// hitter makes contact on 82.7% of swings at strikes and 55.3% of swings at pitches out of the zone.
 var CONTACT = {
-	normalSwing: { heart: 0.90, edge: 0.78, chase: 0.50, waste: 0.18 },
-	swingForTheFences: { heart: 0.78, edge: 0.62, chase: 0.34, waste: 0.08 },
-	protectPlate: { heart: 0.97, edge: 0.94, chase: 0.80, waste: 0.45 },
-	behindRunner: { heart: 0.88, edge: 0.76, chase: 0.48, waste: 0.16 },
-	bunt: { heart: 0.78, edge: 0.66, chase: 0.35, waste: 0.10 }
+	normalSwing: { heart: 0.87, edge: 0.725, shadowOut: 0.625, chase: 0.455, waste: 0.27 },
+	swingForTheFences: { heart: 0.785, edge: 0.62, shadowOut: 0.52, chase: 0.37, waste: 0.22 },
+	protectPlate: { heart: 0.96, edge: 0.86, shadowOut: 0.79, chase: 0.65, waste: 0.44 },
+	behindRunner: { heart: 0.865, edge: 0.72, shadowOut: 0.62, chase: 0.45, waste: 0.26 },
+	bunt: { heart: 0.80, edge: 0.68, shadowOut: 0.55, chase: 0.33, waste: 0.12 }
 };
 
-// Share of contact that goes foul rather than in play
-var FOUL_SHARE = { normalSwing: 0.40, swingForTheFences: 0.36, protectPlate: 0.84, behindRunner: 0.44, bunt: 0.38 };
-var FOUL_LOCATION_BONUS = { heart: -0.06, edge: 0.02, chase: 0.12, waste: 0.18 };
+// Share of contact that goes foul rather than in play. League-wide about 52% of contact is foul (a 17.2% of
+// pitches are put in play on 47.8% swings), more on pitches off the plate.
+var FOUL_SHARE = { heart: 0.46, edge: 0.54, shadowOut: 0.62, chase: 0.66, waste: 0.70 };
+var FOUL_APPROACH_SHIFT = { normalSwing: 0, swingForTheFences: -0.04, protectPlate: 0.24, behindRunner: 0.02, bunt: -0.06 };
+var TWO_STRIKE_FOUL_BONUS = 0.03; // Fouls per swing rise from about 41% to 43% with two strikes
+var TWO_STRIKE_CONTACT_BONUS = 0.04; // Hitters shorten their swings with two strikes
 
-// Chance a ball in play falls for a hit, by pitch location and approach
-var HIT_CHANCE = { heart: 0.36, edge: 0.31, chase: 0.20, waste: 0.12 };
-var HIT_APPROACH_BONUS = { normalSwing: 0, swingForTheFences: 0.03, protectPlate: -0.07, behindRunner: -0.04 };
-var BUNT_SINGLE_CHANCE = { heart: 0.26, edge: 0.20, chase: 0.12, waste: 0.08 };
+// Balls in play: the share that are ground balls, line drives, fly balls and pop-ups, and how often each falls for
+// a hit. Fly balls include home runs (15.6% of fly balls leave the park).
+var BATTED_BALL_WEIGHTS = { gb: 42.4, ld: 23.9, fb: 26.6, pu: 7.1 };
+var HIT_CHANCE = { gb: 0.244, ld: 0.650, fb: 0.093, pu: 0.02 }; // Fly balls: hits other than home runs
+var HOME_RUN_PER_FLY = 0.156;
+var HOME_RUN_PER_LINER = 0.016;
+var HIT_KINDS = {
+	gb: { single: 0.96, double: 0.035, triple: 0.005 },
+	ld: { single: 0.66, double: 0.295, triple: 0.018 },
+	fb: { single: 0.32, double: 0.60, triple: 0.08 },
+	pu: { single: 1, double: 0, triple: 0 }
+};
+var INSIDE_PARK_SHARE = 0.002; // About 1 home run in 500
+var BUNT_SINGLE_CHANCE = { heart: 0.26, edge: 0.20, shadowOut: 0.15, chase: 0.12, waste: 0.08 };
 
-// What a ball in play can be: label, how the at-bat ended, Statcast-style hit data, and where it landed on the field.
+// Baserunning. Chance a runner takes the extra base on a hit or a ball in play.
+var SCORE_FROM_SECOND_ON_SINGLE = 0.60;
+var FIRST_TO_THIRD_ON_SINGLE = 0.28;
+var SCORE_FROM_FIRST_ON_DOUBLE = 0.42;
+var ADVANCE_ON_GROUNDOUT = { 3: 0.50, 2: 0.45, 1: 0.55 };
+var TAG_UP_FROM_THIRD = 0.92;
+var TAG_UP_FROM_SECOND = 0.30;
+var DOUBLE_PLAY_CHANCE = 0.45; // About 10% of chances: ground-ball outs with a runner on first and fewer than two outs
+var FIELDERS_CHOICE_CHANCE = 0.31;
+
+// Game situations. Weights come from simulating a million half-innings with the league's 2025 plate-appearance
+// results (plus errors, stolen bases and wild pitches, calibrated to the league's 0.49 runs per half-inning):
+// REGULAR_STATE_WEIGHTS[outs * 8 + (first ? 1 : 0) + (second ? 2 : 0) + (third ? 4 : 0)] is how often a batter
+// faces that situation. Extra innings start with a runner on second.
+var REGULAR_STATE_WEIGHTS = [24.346, 6.138, 1.25, 1.466, 0.117, 0.425, 0.194, 0.33, 17.612, 7.833, 2.261, 2.79, 0.441, 0.971, 0.431, 0.809, 13.694, 7.974, 2.883, 3.678, 0.942, 1.482, 0.64, 1.292];
+var EXTRA_STATE_WEIGHTS = [1.066, 2.563, 24.555, 3.107, 0.117, 1.932, 0.201, 0.789, 2.16, 4.09, 13.918, 4.217, 3.95, 2.78, 0.511, 1.493, 3.981, 5.089, 8.593, 4.638, 4.513, 3.01, 0.759, 1.966];
+var HALF_INNING_RUNS = [{ runs: 0, weight: 72.82 }, { runs: 1, weight: 14.81 }, { runs: 2, weight: 6.9 }, { runs: 3, weight: 3.13 }, { runs: 4, weight: 1.39 }, { runs: 5, weight: 0.95 }];
+var RUNS_ALREADY_SCORED = [{ runs: 0, weight: 83.51 }, { runs: 1, weight: 9.63 }, { runs: 2, weight: 4.03 }, { runs: 3, weight: 1.69 }, { runs: 4, weight: 1.15 }]; // Runs the batting team has scored so far this inning
+var EXTRA_RUNS_ALREADY_SCORED = [{ runs: 0, weight: 60.89 }, { runs: 1, weight: 22.95 }, { runs: 2, weight: 9.25 }, { runs: 3, weight: 4.03 }, { runs: 4, weight: 2.88 }];
+var EXTRA_INNING_SHARE = 0.02; // Rough share of plate appearances that come in extra innings
+var EXTRA_INNING_WEIGHTS = [{ inning: 10, weight: 58 }, { inning: 11, weight: 24 }, { inning: 12, weight: 11 }, { inning: 13, weight: 7 }];
+var BOTTOM_NINTH_SHARE = 0.55; // The home team only bats in the bottom of the 9th when it isn't already ahead
+
+// Chance a starting pitcher is still in the game by inning (average starts last about five innings)
+var STARTER_STILL_IN = { 1: 0.99, 2: 0.99, 3: 0.99, 4: 0.98, 5: 0.72, 6: 0.42, 7: 0.16, 8: 0.04, 9: 0.01 };
+var PITCHES_PER_INNING = 16;
+
+// What a ball in play can be: label, how the at-bat ended, and whether it was a hit
 var playInfo = {
-	single: { label: "Single", reason: "singled", ev: [72, 100], la: [-3, 18], dist: [110, 240], result: "hit" },
-	double: { label: "Double", reason: "doubled", ev: [92, 106], la: [10, 24], dist: [280, 380], result: "hit" },
-	triple: { label: "Triple", reason: "tripled", ev: [95, 108], la: [12, 24], dist: [340, 400], result: "hit" },
-	homeRun: { label: "Home Run", reason: "hit a home run", ev: [98, 113], la: [24, 34], dist: [365, 455], result: "homer" },
-	insideParkHR: { label: "Inside-the-Park HR", reason: "hit an inside-the-park home run", ev: [95, 105], la: [10, 20], dist: [330, 400], result: "homer" },
-	groundOut: { label: "Groundout", reason: "grounded out", ev: [65, 98], la: [-14, 2], dist: null, result: "out" },
-	shallowFly: { label: "Flyout", reason: "flew out", ev: [70, 92], la: [30, 50], dist: [150, 270], result: "out" },
-	deepFly: { label: "Flyout", reason: "flew out", ev: [88, 103], la: [28, 40], dist: [330, 400], result: "out" },
-	lineOut: { label: "Lineout", reason: "lined out", ev: [90, 105], la: [8, 20], dist: [180, 290], result: "out" },
-	foulOut: { label: "Pop Out", reason: "fouled out", ev: [60, 85], la: [50, 75], dist: [100, 220], result: "out" },
-	doublePlay: { label: "Double Play", reason: "grounded into a double play", ev: [70, 98], la: [-14, 2], dist: null, result: "out" },
-	advanceOut: { label: "Groundout", reason: "grounded out, moving the runners up", ev: [65, 95], la: [-12, 2], dist: null, result: "out" },
-	buntSingle: { label: "Bunt Single", reason: "bunted for a single", ev: [15, 32], la: [-20, -2], dist: null, result: "hit" },
-	buntOut: { label: "Bunt Groundout", reason: "were thrown out on a bunt", ev: [15, 32], la: [-20, -2], dist: null, result: "out" },
-	buntPop: { label: "Bunt Pop Out", reason: "popped out on a bunt", ev: [18, 34], la: [25, 55], dist: null, result: "out" }
+	single: { label: "Single", reason: "singled", result: "hit" },
+	double: { label: "Double", reason: "doubled", result: "hit" },
+	triple: { label: "Triple", reason: "tripled", result: "hit" },
+	homeRun: { label: "Home Run", reason: "hit a home run", result: "homer" },
+	insideParkHR: { label: "Inside-the-Park HR", reason: "hit an inside-the-park home run", result: "homer" },
+	groundOut: { label: "Groundout", reason: "grounded out", result: "out" },
+	fieldersChoice: { label: "Fielder's Choice", reason: "hit into a fielder's choice", result: "out" },
+	shallowFly: { label: "Flyout", reason: "flew out", result: "out" },
+	deepFly: { label: "Flyout", reason: "flew out", result: "out" },
+	lineOut: { label: "Lineout", reason: "lined out", result: "out" },
+	foulOut: { label: "Pop Out", reason: "fouled out", result: "out" },
+	popOut: { label: "Pop Out", reason: "popped out", result: "out" },
+	doublePlay: { label: "Double Play", reason: "grounded into a double play", result: "out" },
+	advanceOut: { label: "Groundout", reason: "grounded out, moving the runners up", result: "out" },
+	buntSingle: { label: "Bunt Single", reason: "bunted for a single", result: "hit" },
+	buntOut: { label: "Bunt Groundout", reason: "were thrown out on a bunt", result: "out" },
+	buntPop: { label: "Bunt Pop Out", reason: "popped out on a bunt", result: "out" }
 };
 
 // Narrative and landing spot (x, y on the field view) for each kind of ball in play
@@ -190,6 +270,10 @@ var inPlayPools = {
 		{ text: "You grounded out to third.", x: 110, y: 188 },
 		{ text: "You grounded out to first.", x: 190, y: 188 }
 	],
+	fieldersChoice: [
+		{ text: "You hit a grounder to short. The runner was forced out at second, and you beat the relay to first.", x: 128, y: 165 },
+		{ text: "You hit a grounder to third. The runner was forced out at second, and you reached first.", x: 110, y: 188 }
+	],
 	shallowFly: [
 		{ text: "You flew out to shallow left field.", x: 92, y: 120 },
 		{ text: "You flew out to shallow center field.", x: 150, y: 110 },
@@ -209,6 +293,11 @@ var inPlayPools = {
 		{ text: "You fouled out to the first baseman.", x: 225, y: 200 },
 		{ text: "You fouled out to the third baseman.", x: 80, y: 215 },
 		{ text: "You popped up in foul territory and the catcher squeezed it.", x: 150, y: 238 }
+	],
+	popOut: [
+		{ text: "You popped up to shortstop.", x: 135, y: 150 },
+		{ text: "You popped up to second base.", x: 168, y: 150 },
+		{ text: "You popped up to the third baseman.", x: 108, y: 175 }
 	],
 	doublePlay: [
 		{ text: "You grounded into a 5-4-3 double play.", x: 110, y: 188 },
@@ -259,6 +348,13 @@ function randomBetween(min, max) {
 
 function randomInt(min, max) {
 	return Math.floor(randomBetween(min, max + 1));
+}
+
+// A normal (bell curve) random number using the Box-Muller transform
+function randomNormal(mean, spread) {
+	var u = 1 - Math.random();
+	var v = Math.random();
+	return mean + spread * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
 }
 
 function clamp(value, min, max) {
@@ -360,16 +456,9 @@ function addParagraph(text, className) {
 	return paragraph;
 }
 
-// Runs scored in one half-inning, weighted toward how often MLB teams score each amount
+// Runs scored in one complete half-inning
 function halfInningRuns() {
-	return randomWeighted([
-		{ runs: 0, weight: 72 },
-		{ runs: 1, weight: 15 },
-		{ runs: 2, weight: 7 },
-		{ runs: 3, weight: 3.5 },
-		{ runs: 4, weight: 1.5 },
-		{ runs: 5, weight: 1 }
-	]).runs;
+	return randomWeighted(HALF_INNING_RUNS).runs;
 }
 
 function totalRuns(halfInnings) {
@@ -380,11 +469,39 @@ function totalRuns(halfInnings) {
 	return runs;
 }
 
+function stateFromIndex(index) {
+	var base = index % 8;
+	return { outs: Math.floor(index / 8), bases: [!!(base & 1), !!(base & 2), !!(base & 4)] };
+}
+
+function randomState(weights) {
+	var states = weights.map(function(weight, index) {
+		var state = stateFromIndex(index);
+		state.weight = weight;
+		return state;
+	});
+	return randomWeighted(states);
+}
+
+function pickInning() {
+	if (Math.random() < EXTRA_INNING_SHARE) {
+		return { inning: randomWeighted(EXTRA_INNING_WEIGHTS).inning, top: Math.random() < 0.5, extra: true };
+	}
+	var halves = [];
+	for (var i = 1; i <= 9; i++) {
+		halves.push({ inning: i, top: true, weight: 1 });
+		halves.push({ inning: i, top: false, weight: i == 9 ? BOTTOM_NINTH_SHARE : 1 });
+	}
+	return randomWeighted(halves);
+}
+
 function generateSituation() {
-	inning = Math.random() < 0.06 ? randomInt(10, 12) : randomInt(1, 9);
-	isTopInning = Math.random() < 0.5;
-	outs = randomInt(0, 2);
-	bases = randomWeighted(baseStates).bases.slice();
+	var spot = pickInning();
+	inning = spot.inning;
+	isTopInning = spot.top;
+	var state = randomState(spot.extra ? EXTRA_STATE_WEIGHTS : REGULAR_STATE_WEIGHTS);
+	outs = state.outs;
+	bases = state.bases.slice();
 
 	// The bottom of the 9th or later is only played while the home team isn't ahead
 	do {
@@ -399,22 +516,27 @@ function generateSituation() {
 			homeRuns = totalRuns(inning - 1);
 		}
 		// Runs the batting team has already scored this half-inning
+		var alreadyScored = randomWeighted(spot.extra ? EXTRA_RUNS_ALREADY_SCORED : RUNS_ALREADY_SCORED).runs;
 		if (isTopInning) {
-			awayRuns += halfInningRuns();
+			awayRuns += alreadyScored;
 		} else {
-			homeRuns += halfInningRuns();
+			homeRuns += alreadyScored;
 		}
 	} while (!isTopInning && inning >= 9 && homeRuns > awayRuns);
 }
 
 // Move runners and the batter, returning the runs that scored.
 // advanceBy(base) says how many bases the runner on that base (1-3) moves; batterBase is 0 when the batter is out.
+// Runners never pass or share a base: one blocked by a runner ahead stops behind them.
 function advanceRunners(advanceBy, batterBase) {
 	var newBases = [false, false, false];
 	var runs = 0;
 	for (var base = 3; base >= 1; base--) {
 		if (bases[base - 1]) {
 			var destination = base + advanceBy(base);
+			while (destination > base && destination < 4 && newBases[destination - 1]) {
+				destination--;
+			}
 			if (destination >= 4) {
 				runs++;
 			} else {
@@ -452,11 +574,25 @@ function resolvePlay(play) {
 	var runs = 0;
 	var note = "";
 	var outsBefore = outs;
-	if (play == "single" || play == "buntSingle") {
-		// On a single, a runner on second comes around to score
-		runs = advanceRunners(function(base) { return play == "single" && base == 2 ? 2 : 1; }, 1);
+	if (play == "single") {
+		runs = advanceRunners(function(base) {
+			if (base == 3) {
+				return 1;
+			}
+			if (base == 2) {
+				return Math.random() < SCORE_FROM_SECOND_ON_SINGLE ? 2 : 1;
+			}
+			return Math.random() < FIRST_TO_THIRD_ON_SINGLE ? 2 : 1;
+		}, 1);
+	} else if (play == "buntSingle") {
+		runs = advanceRunners(function() { return 1; }, 1);
 	} else if (play == "double") {
-		runs = advanceRunners(function() { return 2; }, 2);
+		runs = advanceRunners(function(base) {
+			if (base == 1) {
+				return Math.random() < SCORE_FROM_FIRST_ON_DOUBLE ? 3 : 2;
+			}
+			return 3;
+		}, 2);
 	} else if (play == "triple") {
 		runs = advanceRunners(function() { return 3; }, 3);
 	} else if (play == "homeRun" || play == "insideParkHR") {
@@ -467,11 +603,34 @@ function resolvePlay(play) {
 		if (outs < 3) {
 			runs = advanceRunners(function() { return 1; }, 0);
 		}
-	} else if (play == "deepFly" && bases[2] && outsBefore < 2) {
+	} else if (play == "fieldersChoice") {
+		// The lead runner is forced out at second and the batter reaches first; a runner on third can score
 		outs++;
-		bases[2] = false;
-		runs = 1;
-		note = "The runner tagged up from third and scored on the sacrifice fly.";
+		bases[0] = false;
+		if (outs < 3) {
+			runs = advanceRunners(function(base) { return base == 3 && Math.random() < ADVANCE_ON_GROUNDOUT[3] ? 1 : 0; }, 1);
+		}
+	} else if (play == "groundOut") {
+		outs++;
+		if (outs < 3) {
+			runs = advanceRunners(function(base) { return Math.random() < ADVANCE_ON_GROUNDOUT[base] ? 1 : 0; }, 0);
+			if (runs > 0) {
+				note = "The runner scored on the groundout.";
+			}
+		}
+	} else if (play == "deepFly") {
+		outs++;
+		if (outs < 3) {
+			runs = advanceRunners(function(base) {
+				if (base == 3) {
+					return Math.random() < TAG_UP_FROM_THIRD ? 1 : 0;
+				}
+				return base == 2 && Math.random() < TAG_UP_FROM_SECOND ? 1 : 0;
+			}, 0);
+			if (runs > 0) {
+				note = "The runner tagged up from third and scored on the sacrifice fly.";
+			}
+		}
 	} else if (play == "advanceOut") {
 		outs++;
 		runs = advanceRunners(function() { return 1; }, 0);
@@ -488,37 +647,42 @@ function resolvePlay(play) {
 
 // Pitcher and batter profiles
 function generatePitcher() {
-	var fastball = Math.random() < 0.65 ? "fourSeam" : "sinker";
-	var others = shuffle(["slider", "curveball", "changeup", "cutter", "splitter"]).slice(0, randomInt(2, 3));
-	var mix = [{ type: pitchLibrary[fastball], weight: randomInt(40, 58) }];
-	var remaining = 100 - mix[0].weight;
-	var shares = others.map(function() { return randomInt(1, 3); });
-	var shareTotal = shares.reduce(function(total, share) { return total + share; }, 0);
-	others.forEach(function(key, i) {
-		mix.push({ type: pitchLibrary[key], weight: remaining * shares[i] / shareTotal });
+	// A primary fastball, then secondary pitches chosen by how often the league throws them
+	var primary = Math.random() < pitchLibrary.fourSeam.usage / (pitchLibrary.fourSeam.usage + pitchLibrary.sinker.usage) ? "fourSeam" : "sinker";
+	var pool = Object.keys(pitchLibrary).filter(function(key) { return key != primary; }).map(function(key) {
+		return { key: key, weight: pitchLibrary[key].usage };
 	});
+	var mix = [{ type: pitchLibrary[primary], weight: pitchLibrary[primary].usage * randomBetween(0.7, 1.6) }];
+	var secondaryCount = randomWeighted([{ count: 2, weight: 3 }, { count: 3, weight: 5 }, { count: 4, weight: 2 }]).count;
+	for (var i = 0; i < secondaryCount && pool.length; i++) {
+		var pick = randomWeighted(pool);
+		pool.splice(pool.indexOf(pick), 1);
+		mix.push({ type: pitchLibrary[pick.key], weight: pitchLibrary[pick.key].usage * randomBetween(0.6, 1.6) });
+	}
+	var starterChance = STARTER_STILL_IN[inning] || 0;
 	return {
 		name: randomItem(pitcherInitials) + ". " + randomItem(pitcherSurnames),
-		hand: Math.random() < 0.27 ? "L" : "R",
+		hand: Math.random() < 0.28 ? "L" : "R",
+		role: Math.random() < starterChance ? "Starter" : "Reliever",
 		mix: mix,
-		control: randomBetween(-0.06, 0.06), // Shifts how often pitches are strikes
-		stuff: randomBetween(-0.04, 0.04), // Shifts how hard the pitcher is to hit
-		velo: randomBetween(-1.5, 1.5)
+		control: clamp(randomNormal(0, 0.025), -0.05, 0.05), // Shifts how often pitches are strikes
+		stuff: clamp(randomNormal(0, 0.02), -0.04, 0.04), // Shifts how hard the pitcher is to hit
+		velo: clamp(randomNormal(0, 2), -4, 4) // Mph above or below the league average for each pitch
 	};
 }
 
 function scoutingText() {
-	var control = pitcher.control > 0.03 ? "Pinpoint control" : (pitcher.control < -0.03 ? "Wild at times" : "Average control");
-	var stuff = pitcher.stuff > 0.02 ? "nasty stuff" : (pitcher.stuff < -0.02 ? "hittable stuff" : "solid stuff");
+	var control = pitcher.control > 0.02 ? "Pinpoint control" : (pitcher.control < -0.02 ? "Wild at times" : "Average control");
+	var stuff = pitcher.stuff > 0.015 ? "nasty stuff" : (pitcher.stuff < -0.015 ? "hittable stuff" : "solid stuff");
 	return control + ", " + stuff + ".";
 }
 
-// Late innings mean relievers who have thrown fewer pitches
+// Starters have thrown about 16 pitches an inning; relievers have just come in
 function startingPitchCount() {
-	if (inning >= 7) {
-		return randomInt(5, 28);
+	if (pitcher.role == "Starter") {
+		return Math.max(0, (inning - 1) * PITCHES_PER_INNING + outs * 5 + randomInt(-6, 8));
 	}
-	return (inning - 1) * 14 + randomInt(0, 12);
+	return randomInt(0, 16);
 }
 
 // How tired the pitcher is, from 0 (fresh) to 1 (gassed)
@@ -535,7 +699,7 @@ function fatigueLabel() {
 
 // Pitch generation
 function zoneChance() {
-	var chance = ZONE_RATE[Math.min(balls, 3)][Math.min(strikes, 2)] + pitcher.control - 0.10 * pitcherFatigue();
+	var chance = ZONE_RATE[Math.min(balls, 3)][Math.min(strikes, 2)] + ZONE_RATE_OFFSET + pitcher.control - 0.04 * pitcherFatigue();
 	return clamp(chance, 0.25, 0.75);
 }
 
@@ -545,11 +709,14 @@ function pickLocationClass() {
 	}
 	if (Math.random() < zoneChance()) {
 		// Pitchers who are behind in the count throw it down the middle; with two strikes they nibble the edges
-		var heartShare = 0.35 + (balls > strikes ? 0.12 : 0) - (strikes == 2 && balls < 3 ? 0.12 : 0);
+		var heartShare = HEART_SHARE_OF_ZONE + (balls > strikes ? 0.04 : 0) - (strikes == 2 ? 0.04 : 0);
 		return Math.random() < heartShare ? "heart" : "edge";
 	}
-	// With two strikes pitchers try to get a chase just off the plate
-	return Math.random() < (strikes == 2 ? 0.58 : 0.38) ? "chase" : "waste";
+	// Out of the zone: shadow 19.8%, chase 21.7% and waste 7.85% of all pitches; with two strikes pitchers go for chases
+	var shares = strikes == 2 ?
+		[{ cls: "shadowOut", weight: 0.36 }, { cls: "chase", weight: 0.50 }, { cls: "waste", weight: 0.14 }] :
+		[{ cls: "shadowOut", weight: 0.41 }, { cls: "chase", weight: 0.435 }, { cls: "waste", weight: 0.155 }];
+	return randomWeighted(shares).cls;
 }
 
 function inRect(x, y, rect) {
@@ -562,23 +729,14 @@ function locationFor(locClass) {
 	if (locClass == "hbp") {
 		return { x: randomBetween(12, 30), y: randomBetween(80, 150) };
 	}
+	var area = { heart: heart, edge: zone, shadowOut: shadowBox, chase: chaseBox, waste: plotBox }[locClass];
 	do {
-		if (locClass == "heart") {
-			x = randomBetween(heart.left, heart.right);
-			y = randomBetween(heart.top, heart.bottom);
-		} else if (locClass == "edge") {
-			x = randomBetween(zone.left, zone.right);
-			y = randomBetween(zone.top, zone.bottom);
-		} else if (locClass == "chase") {
-			x = randomBetween(zone.left - 14, zone.right + 14);
-			y = randomBetween(zone.top - 14, zone.bottom + 14);
-		} else {
-			x = randomBetween(22, 178);
-			y = randomBetween(22, 206);
-		}
+		x = randomBetween(area.left, area.right);
+		y = randomBetween(area.top, area.bottom);
 	} while ((locClass == "edge" && inRect(x, y, heart)) ||
-		(locClass == "chase" && inRect(x, y, zone)) ||
-		(locClass == "waste" && inRect(x, y, { left: zone.left - 14, right: zone.right + 14, top: zone.top - 14, bottom: zone.bottom + 14 })));
+		(locClass == "shadowOut" && inRect(x, y, zone)) ||
+		(locClass == "chase" && inRect(x, y, shadowBox)) ||
+		(locClass == "waste" && inRect(x, y, chaseBox)));
 	return { x: x, y: y };
 }
 
@@ -603,6 +761,16 @@ function isInZone(p) {
 	return p.locClass == "heart" || p.locClass == "edge";
 }
 
+// Inches from the edge of the strike zone: positive outside it, negative inside it
+function distanceToEdge(p) {
+	var dx = Math.max(zone.left - p.x, 0, p.x - zone.right);
+	var dy = Math.max(zone.top - p.y, 0, p.y - zone.bottom);
+	if (dx > 0 || dy > 0) {
+		return Math.sqrt(dx * dx + dy * dy) / UNITS_PER_INCH;
+	}
+	return -Math.min(p.x - zone.left, zone.right - p.x, p.y - zone.top, zone.bottom - p.y) / UNITS_PER_INCH;
+}
+
 function describeLocation(p) {
 	if (p.locClass == "heart") {
 		return "right down the middle";
@@ -618,13 +786,14 @@ function describeLocation(p) {
 	}
 	var vertical = p.y < zone.top ? "high" : (p.y > zone.bottom ? "low" : "");
 	var horizontal = p.x < zone.left ? "inside" : (p.x > zone.right ? "outside" : "");
+	var close = p.locClass == "shadowOut" ? "just " : "";
 	if (vertical && horizontal) {
-		return vertical + " and " + horizontal;
+		return close + vertical + " and " + horizontal;
 	}
 	if (vertical) {
-		return p.y > 190 ? "in the dirt" : vertical;
+		return p.y > 190 ? "in the dirt" : close + vertical;
 	}
-	return "off the plate " + horizontal;
+	return close + "off the plate " + horizontal;
 }
 
 function pitchTypeName(p) {
@@ -659,98 +828,172 @@ function approachHint(id) {
 }
 
 function contactChance(swingType, p) {
-	var chance = CONTACT[swingType][p.locClass] + p.type.contact + batter.contact - pitcher.stuff + 0.05 * pitcherFatigue();
+	var chance = CONTACT[swingType][p.locClass] + p.type.contact + batter.contact - pitcher.stuff + 0.04 * pitcherFatigue();
 	if (p.type.fastball) {
 		// Harder fastballs are harder to catch up to
-		chance -= (p.speed - 94) * 0.006;
+		chance -= (p.speed - 94) * 0.005;
 	}
-	if (strikes == 2 && swingType != "protectPlate") {
-		chance -= 0.04;
+	if (strikes == 2) {
+		chance += TWO_STRIKE_CONTACT_BONUS;
 	}
 	return clamp(chance, 0.03, 0.97);
 }
 
 function foulShare(swingType, p) {
-	return clamp(FOUL_SHARE[swingType] + FOUL_LOCATION_BONUS[p.locClass] + (strikes == 2 ? 0.04 : 0), 0.1, 0.9);
+	return clamp(FOUL_SHARE[p.locClass] + FOUL_APPROACH_SHIFT[swingType] + (strikes == 2 ? TWO_STRIKE_FOUL_BONUS : 0), 0.1, 0.92);
 }
 
-// Does a taken pitch get called a strike? Umpires miss borderline calls now and then.
+// Umpires call a strike more often the closer a pitch is to the zone. FanGraphs measured the odds outside the zone
+// in 2020-21 (43% within half an inch of the edge, falling to about 8% three inches out). Umpires were more
+// accurate on those pitches in 2025, so they are scaled down here until the game matches the 2025 league
+// accuracy of 92.8% and about 16% of pitches called strikes. The odds just inside the zone mirror the curve.
+var OUTSIDE_CALLED_STRIKE_SCALE = 0.8;
+function calledStrikeChance(p) {
+	var distance = distanceToEdge(p);
+	var chance;
+	if (distance > 0) {
+		chance = OUTSIDE_CALLED_STRIKE_SCALE * (distance <= 0.5 ? 0.43 : (distance <= 1.5 ? 0.345 : (distance <= 2.5 ? 0.18 : (distance <= 3.5 ? 0.075 : (distance <= 5 ? 0.02 : 0)))));
+	} else {
+		var inside = -distance;
+		chance = inside <= 0.5 ? 0.62 : (inside <= 1.5 ? 0.74 : (inside <= 2.5 ? 0.86 : (inside <= 3.5 ? 0.94 : (inside <= 5 ? 0.98 : 0.995))));
+	}
+	// Borderline pitches lean toward the side of the count: more strikes at 3-0, fewer at 0-2
+	if (Math.abs(distance) <= 2.5) {
+		chance += (balls == 3 ? 0.05 : 0) - (strikes == 2 ? 0.05 : 0);
+	}
+	return clamp(chance, 0, 1);
+}
+
+// A call only counts as missed when it is more than three-quarters of an inch from the zone's edge
 function takeCall(p) {
-	var strikeChance = { heart: 0.99, edge: 0.84, chase: 0.10, waste: 0 }[p.locClass];
-	var strike = Math.random() < strikeChance;
-	return { strike: strike, missed: strike != isInZone(p) };
+	var strike = Math.random() < calledStrikeChance(p);
+	var wrong = strike != isInZone(p);
+	return { strike: strike, missed: wrong && Math.abs(distanceToEdge(p)) > 0.75 };
+}
+
+// A ball in play: how it was hit, whether it fell in, and what kind of hit or out it was
+function pickBattedBall(swingType, p) {
+	var weights = { gb: BATTED_BALL_WEIGHTS.gb, ld: BATTED_BALL_WEIGHTS.ld, fb: BATTED_BALL_WEIGHTS.fb, pu: BATTED_BALL_WEIGHTS.pu };
+	// Pitches down in the zone get hit on the ground, pitches up in the air
+	var height = clamp((p.y - 115) / 55, -1, 1);
+	weights.gb += 7 * height;
+	weights.fb -= 5 * height;
+	weights.pu -= 2 * height;
+	// Pitches off the plate get weak contact
+	if (p.locClass == "chase") {
+		weights.gb += 4; weights.pu += 4; weights.ld -= 5; weights.fb -= 3;
+	} else if (p.locClass == "waste") {
+		weights.gb += 6; weights.pu += 6; weights.ld -= 8; weights.fb -= 4;
+	}
+	if (swingType == "swingForTheFences") {
+		weights.gb -= 8; weights.fb += 8;
+	} else if (swingType == "protectPlate") {
+		weights.gb += 5; weights.ld -= 2; weights.fb -= 3;
+	} else if (swingType == "behindRunner") {
+		weights.gb += 25; weights.fb -= 15; weights.ld -= 5; weights.pu -= 5;
+	}
+	if (batter.id == "contact") {
+		weights.ld += 3; weights.fb -= 2; weights.gb -= 1;
+	} else if (batter.id == "power") {
+		weights.fb += 4; weights.gb -= 3; weights.ld -= 1;
+	}
+	var items = Object.keys(weights).map(function(kind) { return { kind: kind, weight: Math.max(0.5, weights[kind]) }; });
+	return randomWeighted(items).kind;
 }
 
 function chooseInPlay(swingType, p) {
-	var play;
 	if (swingType == "bunt") {
 		if (Math.random() < BUNT_SINGLE_CHANCE[p.locClass]) {
-			return "buntSingle";
+			return { play: "buntSingle", kind: "bunt" };
 		}
-		return Math.random() < 0.7 ? "buntOut" : "buntPop";
+		return { play: Math.random() < 0.7 ? "buntOut" : "buntPop", kind: "bunt" };
 	}
-	var hitChance = clamp(HIT_CHANCE[p.locClass] + HIT_APPROACH_BONUS[swingType] + batter.contact * 0.4, 0.05, 0.6);
-	if (Math.random() < hitChance) {
-		var power = approachesPower(swingType);
-		var weights = {
-			single: Math.max(1, power.single - batter.xbhShift * 0.9),
-			double: Math.max(1, power.double + batter.xbhShift * 0.3),
-			triple: power.triple,
-			homeRun: Math.max(1, power.homeRun + batter.xbhShift * 0.6)
-		};
-		var roll = Math.random() * (weights.single + weights.double + weights.triple + weights.homeRun);
-		if (roll < weights.single) {
-			return "single";
-		}
-		roll -= weights.single;
-		if (roll < weights.double) {
-			return "double";
-		}
-		roll -= weights.double;
-		if (roll < weights.triple) {
-			return "triple";
-		}
-		return Math.random() < 0.08 ? "insideParkHR" : "homeRun";
-	}
-	if (swingType == "behindRunner" && Math.random() < 0.85) {
-		return "advanceOut";
-	}
-	play = randomWeighted([
-		{ play: "groundOut", weight: 42 },
-		{ play: "shallowFly", weight: 16 },
-		{ play: "deepFly", weight: 18 },
-		{ play: "lineOut", weight: 10 },
-		{ play: "foulOut", weight: 9 }
-	]).play;
-	if (play == "groundOut" && canTurnDoublePlay() && Math.random() < (swingType == "behindRunner" ? 0.1 : 0.5)) {
-		return "doublePlay";
-	}
-	return play;
-}
-
-// Mix of hits by approach: the weight given to each kind of hit
-function approachesPower(swingType) {
+	var kind = pickBattedBall(swingType, p);
+	var power = 1 + batter.xbhShift * 0.02;
 	if (swingType == "swingForTheFences") {
-		return { single: 44, double: 24, triple: 2, homeRun: 30 };
+		power *= 1.35;
+	} else if (swingType == "protectPlate") {
+		power *= 0.6;
+	} else if (swingType == "behindRunner") {
+		power *= 0.5;
 	}
-	if (swingType == "protectPlate") {
-		return { single: 80, double: 16, triple: 1, homeRun: 3 };
+	var homeRunChance = kind == "fb" ? HOME_RUN_PER_FLY * power : (kind == "ld" ? HOME_RUN_PER_LINER * power : 0);
+	if (Math.random() < homeRunChance) {
+		return { play: Math.random() < INSIDE_PARK_SHARE ? "insideParkHR" : "homeRun", kind: kind };
 	}
-	if (swingType == "behindRunner") {
-		return { single: 76, double: 18, triple: 1, homeRun: 5 };
+	if (Math.random() < HIT_CHANCE[kind]) {
+		var kinds = HIT_KINDS[kind];
+		var roll = Math.random() * (kinds.single + kinds.double + kinds.triple);
+		if (roll < kinds.single) {
+			return { play: "single", kind: kind };
+		}
+		return { play: roll < kinds.single + kinds.double ? "double" : "triple", kind: kind };
 	}
-	return { single: 64, double: 21, triple: 2, homeRun: 13 };
+	if (kind == "gb") {
+		if (swingType == "behindRunner" && runnersOn() && Math.random() < 0.85) {
+			return { play: "advanceOut", kind: kind };
+		}
+		if (canTurnDoublePlay() && Math.random() < (swingType == "behindRunner" ? 0.1 : DOUBLE_PLAY_CHANCE)) {
+			return { play: "doublePlay", kind: kind };
+		}
+		if (bases[0] && !bases[1] && outs < 2 && Math.random() < FIELDERS_CHOICE_CHANCE / (1 - DOUBLE_PLAY_CHANCE)) {
+			return { play: "fieldersChoice", kind: kind };
+		}
+		return { play: "groundOut", kind: kind };
+	}
+	if (kind == "ld") {
+		return { play: "lineOut", kind: kind };
+	}
+	if (kind == "fb") {
+		return { play: Math.random() < 0.5 + batter.xbhShift * 0.01 ? "deepFly" : "shallowFly", kind: kind };
+	}
+	return { play: Math.random() < 0.4 ? "foulOut" : "popOut", kind: kind };
 }
 
-// Statcast-style batted ball data
-function hitData(play) {
-	var info = playInfo[play];
-	var launchAngle = Math.round(randomBetween(info.la[0], info.la[1]));
-	return {
-		ev: randomBetween(info.ev[0], info.ev[1]).toFixed(1),
-		la: launchAngle,
-		dist: info.dist && launchAngle >= 8 ? Math.round(randomBetween(info.dist[0], info.dist[1])) : null
-	};
+// Statcast-style batted ball data. Launch angle bands follow MLB's definitions (ground ball under 10 degrees,
+// line drive 10 to 25, fly ball 25 to 50, pop-up over 50); exit velocities average about 88 mph across all
+// balls in play and about 103 mph on home runs.
+function battedBallData(kind, play) {
+	var ev;
+	var la;
+	var dist = null;
+	if (kind == "bunt") {
+		return { ev: clamp(randomNormal(22, 5), 12, 38).toFixed(1), la: Math.round(randomBetween(-20, 10)), dist: null };
+	}
+	if (play == "homeRun") {
+		return {
+			ev: clamp(randomNormal(103.5, 4.5), 95, 116).toFixed(1),
+			la: Math.round(clamp(randomNormal(28, 4.5), 19, 40)),
+			dist: Math.round(clamp(randomNormal(400, 24), 340, 480))
+		};
+	}
+	if (play == "insideParkHR") {
+		return { ev: clamp(randomNormal(98, 5), 88, 108).toFixed(1), la: Math.round(randomBetween(8, 26)), dist: Math.round(randomBetween(330, 395)) };
+	}
+	var spec = {
+		gb: { ev: [84, 11], la: function() { return clamp(randomNormal(-6, 9), -30, 9.9); } },
+		ld: { ev: [95, 7], la: function() { return randomBetween(10, 25); } },
+		fb: { ev: [93, 9], la: function() { return clamp(randomNormal(33, 5), 25, 49); } },
+		pu: { ev: [70, 9], la: function() { return clamp(randomNormal(62, 8), 51, 85); } }
+	}[kind];
+	ev = clamp(randomNormal(spec.ev[0], spec.ev[1]), 40, 112);
+	la = Math.round(spec.la());
+	if (la >= 8) {
+		dist = { ld: 7.2, fb: 9.3, pu: 2.4, gb: 7.2 }[kind] * (ev - 58) * randomBetween(0.9, 1.1);
+		if (play == "deepFly") {
+			dist = clamp(randomNormal(340, 25), 295, 400);
+		} else if (play == "shallowFly") {
+			dist = clamp(randomNormal(215, 35), 130, 275);
+		} else if (play == "double") {
+			dist = Math.max(dist, randomBetween(250, 330));
+		} else if (play == "triple") {
+			dist = Math.max(dist, randomBetween(310, 390));
+		} else if (play == "single") {
+			dist = Math.min(dist, randomBetween(150, 250));
+		}
+		dist = Math.round(clamp(dist, 60, 420));
+	}
+	return { ev: ev.toFixed(1), la: la, dist: dist };
 }
 
 function hitDataText(data) {
@@ -783,6 +1026,33 @@ function commentary() {
 		return "Full count. The whole park is on its feet.";
 	}
 	return "";
+}
+
+// A league-average fact that fits how the at-bat ended
+function leagueFact(reason) {
+	var average = "The average MLB plate appearance lasts " + LEAGUE.pitchesPerPA + " pitches. ";
+	if (reason == "struck out") {
+		return average + "Hitters struck out in " + LEAGUE.strikeoutRate + "% of plate appearances in 2025.";
+	}
+	if (reason == "were walked" || reason == "walked in a run") {
+		return average + LEAGUE.walkRate + "% of plate appearances in 2025 ended in a walk.";
+	}
+	if (reason == "were hit by a pitch") {
+		return average + "Batters were hit by a pitch in about " + LEAGUE.hitByPitchRate + "% of plate appearances in 2025, or " + HIT_BY_PITCH_CHANCE + "% of pitches.";
+	}
+	if (reason == "hit a home run" || reason == "hit an inside-the-park home run") {
+		return average + "Home runs ended " + LEAGUE.homeRunRate + "% of plate appearances in 2025.";
+	}
+	if (reason == "singled" || reason == "bunted for a single") {
+		return average + "Singles were " + LEAGUE.singleShare + "% of hits in 2025.";
+	}
+	if (reason == "doubled") {
+		return average + "Doubles were " + LEAGUE.doubleShare + "% of hits in 2025.";
+	}
+	if (reason == "tripled") {
+		return average + "Only " + LEAGUE.tripleShare + "% of hits in 2025 were triples.";
+	}
+	return average + "With a league on-base percentage of about " + LEAGUE.onBasePct.toFixed(3).slice(1) + ", about " + Math.round((1 - LEAGUE.onBasePct) * 100) + "% of plate appearances ended in an out.";
 }
 
 function startGame() {
@@ -840,7 +1110,7 @@ function throwPitch() {
 	var location = locationFor(locClass);
 	currentPitch = {
 		type: type,
-		speed: randomBetween(type.minSpeed, type.maxSpeed) + pitcher.velo - 3 * pitcherFatigue(),
+		speed: type.mean + pitcher.velo + randomNormal(0, 1.3) - 1.5 * pitcherFatigue(),
 		locClass: locClass,
 		x: location.x,
 		y: location.y,
@@ -936,10 +1206,8 @@ function gameOver(reason, runs, note) {
 	gameOverArea.id = "gameOver";
 	gameContentArea.appendChild(gameOverArea);
 	gameOverArea.appendChild(createParagraph(message));
-	gameOverArea.appendChild(createParagraph("At MLB's average pace of about " + secondsPerPitch() + " seconds between pitches with " + (runnersOn() ? "runners on" : "the bases empty") + ", your at-bat would have lasted about " + formatTime(atBatSeconds) + ". Brandon Belt's 21-pitch at-bat took nearly 13 minutes, before the pitch clock."));
-	if (reason == "were hit by a pitch") {
-		gameOverArea.appendChild(createParagraph("If it's any consolation, you only had a " + HIT_BY_PITCH_CHANCE + "% chance to get hit by a pitch for every pitch you saw. That's pretty impressive."));
-	}
+	gameOverArea.appendChild(createParagraph(leagueFact(reason)));
+	gameOverArea.appendChild(createParagraph("At the pitch clock's pace of about " + secondsPerPitch() + " seconds between pitches with " + (runnersOn() ? "runners on" : "the bases empty") + ", your at-bat would have lasted about " + formatTime(atBatSeconds) + ". Brandon Belt's 21-pitch at-bat took nearly 13 minutes, before the pitch clock."));
 
 	var resetButton = document.createElement("button");
 	resetButton.id = "resetGame";
@@ -967,10 +1235,10 @@ function updateCount() {
 function updateMatchup() {
 	batterTypeDisplay.textContent = batter.name;
 	pitcherNameDisplay.textContent = pitcher.name;
-	pitcherTypeDisplay.textContent = (pitcher.hand == "L" ? "Left" : "Right") + "-handed · " + scoutingText();
+	pitcherTypeDisplay.textContent = pitcher.role + " · " + (pitcher.hand == "L" ? "Left" : "Right") + "-handed · " + scoutingText();
 	var total = pitcher.mix.reduce(function(sum, entry) { return sum + entry.weight; }, 0);
 	arsenalDisplay.innerHTML = "";
-	pitcher.mix.forEach(function(entry) {
+	pitcher.mix.slice().sort(function(a, b) { return b.weight - a.weight; }).forEach(function(entry) {
 		var share = document.createElement("span");
 		share.className = "arsenalPitch";
 		share.textContent = entry.type.short + " " + Math.round(entry.weight / total * 100) + "%";
@@ -1171,10 +1439,11 @@ function addFoul(swingType, p) {
 }
 
 function addInPlay(swingType, p) {
-	var play = chooseInPlay(swingType, p);
+	var choice = chooseInPlay(swingType, p);
+	var play = choice.play;
 	var info = playInfo[play];
 	var result = randomItem(inPlayPools[play]);
-	var data = hitData(play);
+	var data = battedBallData(choice.kind, play);
 	var outsBefore = outs;
 	pitches = pitches + 1;
 	var outcome = resolvePlay(play);
@@ -1182,7 +1451,7 @@ function addInPlay(swingType, p) {
 	var reason = info.reason;
 	if (play == "deepFly" && outcome.runs > 0) {
 		reason = "hit a sacrifice fly";
-	} else if (play == "advanceOut" && outcome.runs > 0) {
+	} else if ((play == "advanceOut" || play == "groundOut") && outcome.runs > 0) {
 		reason = "drove in a run with a groundout";
 	} else if (play == "buntOut" && outcome.note) {
 		reason = "laid down a sacrifice bunt";
