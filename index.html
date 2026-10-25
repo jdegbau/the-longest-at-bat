@@ -23,8 +23,49 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <!-- End Google Tag Manager (noscript) -->
 <noscript><div id="noJS">Whoops! This game requires JavaScript in order to function. Please enable JavaScript and try again.</div></noscript>
 <h1 id="title">The Longest At-Bat</h1>
+
 <main id="game">
-<div id="gameArea">
+<div id="scoreboard">
+<div id="linescore">
+<div class="team"><span class="teamName">Away</span><span id="awayRuns" class="runs">0</span></div>
+<div class="team"><span class="teamName">Home</span><span class="runs">0</span></div>
+</div> <!-- #linescore -->
+<div id="inning"><span class="inningArrow" aria-hidden="true">&#9650;</span> 1st</div>
+<div id="bases" aria-label="Bases empty" role="img"><span id="base2" class="base second"></span><span id="base3" class="base third"></span><span id="base1" class="base first"></span></div>
+<div id="count">
+<div id="balls"><span class="countLabel">B</span><span id="ball1" class="ball"></span><span id="ball2" class="ball"></span><span id="ball3" class="ball"></span></div>
+<div id="strikes"><span class="countLabel">S</span><span id="strike1" class="strike"></span><span id="strike2" class="strike"></span></div>
+<div id="outs"><span class="countLabel">O</span><span id="out1" class="out"></span><span id="out2" class="out"></span></div>
+</div> <!-- #count -->
+<div class="stat"><span class="statLabel">Pitches</span><span id="pitchCount" class="statValue">0</span></div>
+<div class="stat"><span class="statLabel">Est. Time</span><span id="atBatTime" class="statValue">0:00</span></div>
+<div class="stat"><span class="statLabel">Record</span><span id="recordPitches" class="statValue">21</span></div>
+</div> <!-- #scoreboard -->
+
+<div id="field">
+<section id="matchup" aria-label="Matchup">
+<div class="player"><span class="playerRole">At Bat</span><span class="playerName">You</span><span id="batterLine" class="playerLine">Count: 0-0</span></div>
+<div class="player"><span class="playerRole">Pitching</span><span class="playerName">Opponent</span><span id="pitcherLine" class="playerLine">P: 0</span></div>
+</section> <!-- #matchup -->
+
+<section id="zonePanel" aria-label="Strike zone">
+<svg id="strikeZone" viewBox="0 0 200 240" role="img" aria-label="Pitch locations from the catcher's view">
+<rect class="zoneBox" x="60" y="60" width="80" height="110"></rect>
+<line class="zoneGrid" x1="86.7" y1="60" x2="86.7" y2="170"></line>
+<line class="zoneGrid" x1="113.3" y1="60" x2="113.3" y2="170"></line>
+<line class="zoneGrid" x1="60" y1="96.7" x2="140" y2="96.7"></line>
+<line class="zoneGrid" x1="60" y1="133.3" x2="140" y2="133.3"></line>
+<polygon class="homePlate" points="70,205 130,205 130,213 100,225 70,213"></polygon>
+<g id="pitchMarks"></g>
+</svg>
+<ul id="zoneLegend">
+<li><span class="legendDot ballColor"></span>Ball</li>
+<li><span class="legendDot strikeColor"></span>Strike</li>
+<li><span class="legendDot inPlayColor"></span>In play</li>
+</ul>
+</section> <!-- #zonePanel -->
+
+<section id="playPanel" aria-label="Current play">
 <div id="gameContent" aria-live="polite">
 <p>On April 22, 2018, Brandon Belt of the San Francisco Giants set the record for the longest at-bat in Major League Baseball. Facing Jaime Barría of the Los Angeles Angels, Belt fouled off 16 pitches and saw 21 in all before flying out. He broke the 20-pitch record Ricky Gutierrez set against Bartolo Colón in 1998.</p>
 
@@ -34,20 +75,19 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 </div> <!-- #gameContent -->
 
 <div id="swingOptions"></div> <!-- #swingOptions -->
-</div> <!-- #gameArea -->
+</section> <!-- #playPanel -->
 
-<div id="scoreboard">
-<div id="balls"><p class="scoreboardSection">Balls</p><span id="ball1" class="ball"></span><span id="ball2" class="ball"></span><span id="ball3" class="ball"></span></div>
-<div id="strikes"><p class="scoreboardSection">Strikes</p><span id="strike1" class="strike"></span><span id="strike2" class="strike"></span></div>
-<div id="pitches"><p class="scoreboardSection">Pitches</p><p id="pitchCount">0</p></div>
-<div id="time"><p class="scoreboardSection">Est. Time</p><p id="atBatTime">0:00</p></div>
-<div id="bases"><p class="scoreboardSection">Bases</p><span class="diamond first"></span><span class="diamond second"></span><span class="diamond third"></span></div>
-</div> <!-- #scoreboard -->
+<section id="pitchLogPanel" aria-label="Pitch by pitch">
+<h2>Pitch by Pitch</h2>
+<ol id="pitchLog" reversed></ol>
+<p id="pitchLogEmpty">No pitches yet.</p>
+</section> <!-- #pitchLogPanel -->
+</div> <!-- #field -->
 </main> <!-- #game -->
 
 <footer>
 <p>Notice an issue? Please let me know by <a href="https://jdegbau.com/longest-at-bat-bug-report/">filling out a bug report</a>!</p>
-<p>Version 0.0.1</p>
+<p><a href="credits.html">Credits</a> &middot; Version 0.0.1</p>
 </footer>
 <script src="js/LongestAtBat.js"></script>
 </body>
