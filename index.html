@@ -44,8 +44,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
 <div id="field">
 <section id="matchup" aria-label="Matchup">
-<div class="player"><span class="playerRole">At Bat</span><span id="batterName" class="playerName">You</span><span id="batterLine" class="playerLine">Count: 0-0</span></div>
-<div class="player"><span class="playerRole">Pitching</span><span class="playerName">Opponent</span><span id="pitcherLine" class="playerLine">P: 0</span></div>
+<div class="player"><span class="playerRole">At Bat</span><span id="batterName" class="playerName">You</span><span id="batterType" class="playerLine"></span><span id="batterLine" class="playerLine">Count: 0-0</span></div>
+<div class="player"><span class="playerRole">Pitching</span><span id="pitcherName" class="playerName">Opponent</span><span id="pitcherType" class="playerLine"></span><span id="pitcherLine" class="playerLine">P: 0</span></div>
+<div id="arsenal" aria-label="Pitch mix"></div>
 </section> <!-- #matchup -->
 
 <section id="zonePanel" aria-label="Strike zone">
@@ -56,6 +57,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <line class="zoneGrid" x1="60" y1="96.7" x2="140" y2="96.7"></line>
 <line class="zoneGrid" x1="60" y1="133.3" x2="140" y2="133.3"></line>
 <polygon class="homePlate" points="70,205 130,205 130,213 100,225 70,213"></polygon>
+<g id="pitchTrail"></g>
 <g id="pitchMarks"></g>
 </svg>
 <ul id="zoneLegend">
@@ -64,6 +66,29 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <li><span class="legendDot inPlayColor"></span>In play</li>
 </ul>
 </section> <!-- #zonePanel -->
+
+<section id="hitPanel" aria-label="Hit location" hidden>
+<h2>Hit Location</h2>
+<svg id="fieldView" viewBox="0 0 300 245" role="img" aria-label="Where the ball was hit">
+<path class="grass" d="M150 225 L16 91 A190 190 0 0 1 284 91 Z"></path>
+<polygon class="infieldDirt" points="150,225 184,191 150,157 116,191"></polygon>
+<line class="foulLine" x1="150" y1="225" x2="16" y2="91"></line>
+<line class="foulLine" x1="150" y1="225" x2="284" y2="91"></line>
+<path class="fence" d="M16 91 A190 190 0 0 1 284 91"></path>
+<rect id="fieldBase2" class="fieldBase" x="145.5" y="152.5" width="9" height="9" transform="rotate(45 150 157)"></rect>
+<rect id="fieldBase3" class="fieldBase" x="111.5" y="186.5" width="9" height="9" transform="rotate(45 116 191)"></rect>
+<rect id="fieldBase1" class="fieldBase" x="179.5" y="186.5" width="9" height="9" transform="rotate(45 184 191)"></rect>
+<polygon class="homePlate" points="146,223 154,223 154,228 150,231 146,228"></polygon>
+<g class="fielders">
+<circle cx="150" cy="198" r="3.5"></circle><circle cx="150" cy="237" r="3.5"></circle>
+<circle cx="190" cy="185" r="3.5"></circle><circle cx="172" cy="160" r="3.5"></circle>
+<circle cx="128" cy="160" r="3.5"></circle><circle cx="110" cy="186" r="3.5"></circle>
+<circle cx="68" cy="100" r="3.5"></circle><circle cx="150" cy="72" r="3.5"></circle><circle cx="232" cy="100" r="3.5"></circle>
+</g>
+<g id="hitMarks"></g>
+</svg>
+<p id="hitInfo"></p>
+</section> <!-- #hitPanel -->
 
 <section id="playPanel" aria-label="Current play">
 <div id="gameContent" aria-live="polite">
