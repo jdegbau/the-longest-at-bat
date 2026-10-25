@@ -6,7 +6,7 @@
 <meta name="description" content="Can you beat the record for longest at-bat? Find out in this simulation!">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="canonical" href="https://jdegbau.com/games/the-longest-at-bat/">
-<link type="text/css" rel="stylesheet" href="css/LongestAtBat.css" />
+<link type="text/css" rel="stylesheet" href="css/LongestAtBat.css">
 <!-- Google Tag Manager -->
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
 new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -23,32 +23,32 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <!-- End Google Tag Manager (noscript) -->
 <noscript><div id="noJS">Whoops! This game requires JavaScript in order to function. Please enable JavaScript and try again.</div></noscript>
 <h1 id="title">The Longest At-Bat</h1>
-<div id="game">
-<div id="gameContent">
-<p>In 1988, Bartolo Colon and Ricky Guiterrez set the known record for the longest at-bat in Major League baseball. The at-bat took 20 pitches and ended with Gutierrez striking out.</p>
+<main id="game">
+<div id="gameArea">
+<div id="gameContent" aria-live="polite">
+<p>On April 22, 2018, Brandon Belt of the San Francisco Giants set the record for the longest at-bat in Major League Baseball. Facing Jaime Barría of the Los Angeles Angels, Belt fouled off 16 pitches and saw 21 in all before flying out. He broke the 20-pitch record Ricky Gutierrez set against Bartolo Colón in 1998.</p>
 
 <p>Can you beat that record?</p>
 
-<button id="startGame" onclick="startGame()">Let's Find Out!</button>
-
+<button id="startGame" type="button">Let's Find Out!</button>
 </div> <!-- #gameContent -->
 
 <div id="swingOptions"></div> <!-- #swingOptions -->
+</div> <!-- #gameArea -->
+
 <div id="scoreboard">
-<div id="balls"><p class="scoreboardSection">Balls</p><p id="ball1" class="ball"></span><p id="ball2" class="ball"></p><p id="ball3" class="ball"></p></div>
-<div id="strikes"><p class="scoreboardSection">Strikes</p><p id="strike1" class="strike"></p><p id="strike2" class="strike"></p></div>
+<div id="balls"><p class="scoreboardSection">Balls</p><span id="ball1" class="ball"></span><span id="ball2" class="ball"></span><span id="ball3" class="ball"></span></div>
+<div id="strikes"><p class="scoreboardSection">Strikes</p><span id="strike1" class="strike"></span><span id="strike2" class="strike"></span></div>
 <div id="pitches"><p class="scoreboardSection">Pitches</p><p id="pitchCount">0</p></div>
+<div id="time"><p class="scoreboardSection">Est. Time</p><p id="atBatTime">0:00</p></div>
 <div id="bases"><p class="scoreboardSection">Bases</p><span class="diamond first"></span><span class="diamond second"></span><span class="diamond third"></span></div>
-
 </div> <!-- #scoreboard -->
-</div> <!-- #game -->
-
-
+</main> <!-- #game -->
 
 <footer>
-<p>Notice an issue? Please let me know by <a href="https://jdegbau.com/longest-at-bat-bug-report/">filling out a bug report</a>!
+<p>Notice an issue? Please let me know by <a href="https://jdegbau.com/longest-at-bat-bug-report/">filling out a bug report</a>!</p>
 <p>Version 0.0.1</p>
 </footer>
-<script type="text/javascript" src="js/jquery-3.2.1.min.js"></script>
-<script type="text/javascript" src="js/LongestAtBat.js"></script>
+<script src="js/LongestAtBat.js"></script>
 </body>
+</html>
