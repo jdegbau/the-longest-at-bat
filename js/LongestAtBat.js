@@ -839,7 +839,7 @@ function locationFor(locClass) {
 	var x;
 	var y;
 	if (locClass == "hbp") {
-		return { x: fromBatterSide(randomBetween(12, 30)), y: randomBetween(80, 150) };
+		return { x: fromBatterSide(randomBetween(-4, 20)), y: randomBetween(80, 150) };
 	}
 	var area = { heart: heart, edge: zone, shadowOut: shadowBox, chase: chaseBox, waste: plotBox }[locClass];
 	do {
