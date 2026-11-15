@@ -44,13 +44,24 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
 <div id="field">
 <section id="matchup" aria-label="Matchup">
-<div class="player"><span class="playerRole">At Bat</span><span id="batterName" class="playerName">You</span><span id="batterType" class="playerLine"></span><span id="batterLine" class="playerLine">Count: 0-0</span></div>
+<div class="player"><span class="playerRole">At Bat</span><span id="batterName" class="playerName">You</span><span id="batterType" class="playerLine">Bats right</span><span id="batterLine" class="playerLine">Count: 0-0</span></div>
 <div class="player"><span class="playerRole">Pitching</span><span id="pitcherName" class="playerName">Opponent</span><span id="pitcherType" class="playerLine"></span><span id="pitcherLine" class="playerLine">P: 0</span></div>
 <div id="arsenal" aria-label="Pitch mix"></div>
 </section> <!-- #matchup -->
 
 <section id="zonePanel" aria-label="Strike zone">
-<svg id="strikeZone" viewBox="0 0 200 240" role="img" aria-label="Pitch locations from the catcher's view">
+<svg id="strikeZone" viewBox="-40 -26 280 262" role="img" aria-label="Pitch locations from the catcher's view, right-handed batter">
+<g id="batterSilhouette" class="batterSilhouette" aria-hidden="true">
+<g transform="translate(-8 0)">
+<path class="bat" d="M9 43 L4 40 L-23 -13 Q-24 -19 -19 -20 Q-14 -20 -13 -15 Z"></path>
+<path d="M16 20 Q17 7 29 7 Q41 8 41 20 L48 22 Q49 26 44 26 L40 27 Q39 36 32 40 L20 40 Q14 34 16 20 Z"></path>
+<path d="M32 38 Q40 41 42 46 Q48 60 46 74 Q46 94 40 106 Q50 114 54 126 Q62 144 62 160 Q60 176 54 196 L50 220 L64 227 Q67 234 60 234 L40 234 Q37 232 38 226 L42 196 Q46 180 46 168 Q40 150 28 140 L20 136 Q10 148 4 160 Q-2 176 -8 196 L-12 220 L0 227 Q3 234 -4 234 L-24 234 Q-27 232 -26 226 L-24 196 Q-20 178 -16 166 Q-20 148 -18 132 Q-20 114 -8 104 Q0 92 4 78 Q6 56 16 44 L20 38 Z"></path>
+<path d="M18 44 Q2 44 -7 50 Q-12 56 -6 60 Q4 56 14 54 Z"></path>
+<path d="M-8 58 Q-6 50 2 46 L6 38 Q10 36 12 40 L10 50 Z"></path>
+<path d="M42 50 Q44 62 34 64 L12 50 Q6 46 8 40 Q12 36 18 40 L38 46 Z"></path>
+<ellipse cx="9" cy="41" rx="6.5" ry="5.5"></ellipse>
+</g>
+</g>
 <rect class="zoneBox" x="60" y="60" width="80" height="110"></rect>
 <line class="zoneGrid" x1="86.7" y1="60" x2="86.7" y2="170"></line>
 <line class="zoneGrid" x1="113.3" y1="60" x2="113.3" y2="170"></line>

@@ -1,7 +1,7 @@
 // Game-wide constants
 var RECORD_PITCHES = 21; // Brandon Belt vs. Jaime Barría, April 22, 2018
 var NEXT_PITCH_DELAY = 3000; // Milliseconds before the next pitch is delivered
-var RELEASE_POINT = { x: 100, y: 8 }; // Where pitches leave the pitcher's hand in the strike zone view
+var RELEASE_POINT = { y: 8, offset: 10 }; // Where pitches leave the hand in the strike zone view: a righty's arm is on the catcher's left
 var SECONDS_PER_PITCH_EMPTY = 16; // Estimate: 15-second pitch timer with the bases empty
 var SECONDS_PER_PITCH_RUNNERS = 19; // Estimate: 18-second pitch timer with runners on
 
@@ -38,6 +38,8 @@ var nextPitchTimer = null;
 var atBatId = 0; // Changes every at-bat so stale timers can tell they are out of date
 var atBatActive = false;
 var batter = null;
+var batterHandChoice = "R"; // What the player picked: "R", "L" or "S" (switch hitter)
+var batterHand = "R"; // The side the batter is hitting from this at-bat
 var pitcher = null;
 var pitcherPitchCount = 0; // Pitches the pitcher has thrown today
 var currentPitch = null; // The pitch that has been delivered and is waiting on the player's choice
@@ -68,6 +70,8 @@ var pitchLogEmpty = document.getElementById("pitchLogEmpty");
 var hitPanel = document.getElementById("hitPanel");
 var hitMarksArea = document.getElementById("hitMarks");
 var hitInfoDisplay = document.getElementById("hitInfo");
+var strikeZoneDisplay = document.getElementById("strikeZone");
+var batterSilhouette = document.getElementById("batterSilhouette");
 var svgNamespace = "http://www.w3.org/2000/svg";
 
 // Batter types. contact shifts the chance of making contact, xbhShift trades singles for extra-base hits,
@@ -77,6 +81,35 @@ var batterTypes = [
 	{ id: "power", name: "Power hitter", description: "Does damage when you connect, but you swing and miss more.", contact: -0.04, xbhShift: 12, eye: 0 },
 	{ id: "eye", name: "Patient hitter", description: "Great pitch recognition, so your reads on each pitch are better.", contact: 0, xbhShift: 0, eye: 0.2 }
 ];
+
+// Batting sides. A switch hitter always bats from the side opposite the pitcher's throwing hand.
+var batterHands = [
+	{ id: "R", label: "Right" },
+	{ id: "L", label: "Left" },
+	{ id: "S", label: "Switch" }
+];
+var LEFTY_PITCHER_SHARE = 0.28; // Share of pitches thrown by left-handers
+
+// Platoon splits: hitters do better against pitchers who throw from the other side. contact shifts the chance of
+// making contact, power scales home runs and extra-base hits, and deception is added to breaking balls that break
+// away from a same-sided hitter. About 58% of MLB plate appearances have the platoon advantage, and at that mix the
+// two sides average out to about zero.
+var PLATOON = {
+	same: { contact: -0.015, power: 0.93, xbhShift: -2 },
+	opposite: { contact: 0.01, power: 1.05, xbhShift: 1 }
+};
+var SAME_SIDE_BREAKING_DECEPTION = 0.04; // Sliders, sweepers and curveballs break away from a same-sided hitter
+var OPPOSITE_SIDE_CHANGEUP_DECEPTION = 0.03; // Changeups and splitters fade away from an opposite-sided hitter
+var BREAKING_BALLS = ["Slider", "Sweeper", "Curveball"];
+var OFFSPEED = ["Changeup", "Splitter"];
+
+// Where balls in play go. Hitters pull ground balls and home runs; line drives and fly balls spread out more.
+var SPRAY_WEIGHTS = {
+	groundBall: { pull: 1.6, center: 1, oppo: 0.6 },
+	homeRun: { pull: 2.5, center: 1, oppo: 0.5 },
+	other: { pull: 1.15, center: 1, oppo: 0.9 }
+};
+var GROUND_BALL_PLAYS = ["groundOut", "doublePlay", "fieldersChoice"];
 
 // What a swing or take can be. Each option says when it is available.
 var approaches = {
@@ -132,7 +165,8 @@ var ZONE_RATE = [
 var ZONE_RATE_OFFSET = 0;
 
 // Where pitches go, in the strike zone view's coordinates (catcher's view; a right-handed batter stands on the
-// left). About 4 units is an inch: the zone is a 20-inch-wide target.
+// left, a left-handed batter on the right). About 4 units is an inch: the zone is a 20-inch-wide target centered
+// on x = 100, so mirroring a location for the other side is 200 - x.
 var UNITS_PER_INCH = 4;
 var zone = { left: 60, right: 140, top: 60, bottom: 170 };
 var SHADOW_WIDTH = 8; // Statcast's "shadow" is the band around the edge of the zone, here 2 inches
@@ -645,6 +679,84 @@ function resolvePlay(play) {
 	return { runs: runs, note: note };
 }
 
+// Batting side helpers
+function handName(hand) {
+	return hand == "L" ? "left" : "right";
+}
+
+// Turn an x position for a right-handed batter into the same spot for the current batter, or back again
+function fromBatterSide(x) {
+	return batterHand == "L" ? 200 - x : x;
+}
+
+function sameSide() {
+	return pitcher && pitcher.hand == batterHand;
+}
+
+function platoon() {
+	return sameSide() ? PLATOON.same : PLATOON.opposite;
+}
+
+function platoonDeception(type) {
+	if (sameSide() && BREAKING_BALLS.indexOf(type.name) >= 0) {
+		return SAME_SIDE_BREAKING_DECEPTION;
+	}
+	if (!sameSide() && OFFSPEED.indexOf(type.name) >= 0) {
+		return OPPOSITE_SIDE_CHANGEUP_DECEPTION;
+	}
+	return 0;
+}
+
+function platoonText() {
+	var matchup = (batterHand == "L" ? "Lefty" : "Righty") + " vs. " + (pitcher.hand == "L" ? "lefty" : "righty") + ": ";
+	if (sameSide()) {
+		return matchup + "breaking balls will bend away from you, so this is a tougher matchup.";
+	}
+	return matchup + "you'll see the ball well out of the hand. You have the platoon advantage.";
+}
+
+// Show the batter on the correct side of the plate in the strike zone view
+function updateSilhouette() {
+	batterSilhouette.classList.toggle("leftHanded", batterHand == "L");
+	strikeZoneDisplay.setAttribute("aria-label", "Pitch locations from the catcher's view, " + handName(batterHand) + "-handed batter");
+}
+
+function setBatterHandChoice(choice) {
+	batterHandChoice = choice;
+	if (choice != "S") {
+		batterHand = choice;
+	}
+	try {
+		localStorage.setItem("batterHand", choice);
+	} catch (error) {
+		// Storage is unavailable; the choice still applies to this visit
+	}
+	updateSilhouette();
+	if (!atBatActive) {
+		batterTypeDisplay.textContent = choice == "S" ? "Switch hitter" : "Bats " + handName(batterHand);
+	}
+}
+
+// Hitters pull the ball: weight each landing spot by whether it is to the pull side, center or opposite field
+function pickLanding(play) {
+	var pool = inPlayPools[play];
+	var weights = GROUND_BALL_PLAYS.indexOf(play) >= 0 ? SPRAY_WEIGHTS.groundBall :
+		(play == "homeRun" ? SPRAY_WEIGHTS.homeRun : SPRAY_WEIGHTS.other);
+	if (play == "advanceOut" || pool.length == 1) {
+		return randomItem(pool);
+	}
+	return randomWeighted(pool.map(function(spot) {
+		var x = batterHand == "L" ? 300 - spot.x : spot.x; // The field view's center line is x = 150
+		var field = x < 135 ? "pull" : (x > 165 ? "oppo" : "center");
+		return { spot: spot, weight: weights[field] };
+	})).spot;
+}
+
+function foulNarrative() {
+	var text = foulNarrative();
+	return batterHand == "L" ? text.replace("left field line", "right field line") : text;
+}
+
 // Pitcher and batter profiles
 function generatePitcher() {
 	// A primary fastball, then secondary pitches chosen by how often the league throws them
@@ -662,7 +774,7 @@ function generatePitcher() {
 	var starterChance = STARTER_STILL_IN[inning] || 0;
 	return {
 		name: randomItem(pitcherInitials) + ". " + randomItem(pitcherSurnames),
-		hand: Math.random() < 0.28 ? "L" : "R",
+		hand: Math.random() < LEFTY_PITCHER_SHARE ? "L" : "R",
 		role: Math.random() < starterChance ? "Starter" : "Reliever",
 		mix: mix,
 		control: clamp(randomNormal(0, 0.025), -0.05, 0.05), // Shifts how often pitches are strikes
@@ -727,7 +839,7 @@ function locationFor(locClass) {
 	var x;
 	var y;
 	if (locClass == "hbp") {
-		return { x: randomBetween(12, 30), y: randomBetween(80, 150) };
+		return { x: fromBatterSide(randomBetween(12, 30)), y: randomBetween(80, 150) };
 	}
 	var area = { heart: heart, edge: zone, shadowOut: shadowBox, chase: chaseBox, waste: plotBox }[locClass];
 	do {
@@ -747,7 +859,7 @@ function readPitch(locClass, type) {
 	}
 	var odds = READ_ODDS[locClass];
 	// Breaking balls and offspeed pitches hide their location: balls look more like strikes
-	var hidden = Math.min(odds.ball, type.deception);
+	var hidden = Math.min(odds.ball, type.deception + platoonDeception(type));
 	var strikeOdds = odds.strike + hidden * 0.4;
 	var borderOdds = odds.border + hidden * 0.6;
 	var roll = Math.random();
@@ -776,16 +888,18 @@ function describeLocation(p) {
 		return "right down the middle";
 	}
 	if (p.locClass == "edge") {
-		if (p.x < zone.left + 16) {
+		var x = fromBatterSide(p.x);
+		if (x < zone.left + 16) {
 			return "on the inside corner";
 		}
-		if (p.x > zone.right - 16) {
+		if (x > zone.right - 16) {
 			return "on the outside corner";
 		}
 		return p.y < zone.top + 20 ? "at the top of the zone" : "at the knees";
 	}
 	var vertical = p.y < zone.top ? "high" : (p.y > zone.bottom ? "low" : "");
-	var horizontal = p.x < zone.left ? "inside" : (p.x > zone.right ? "outside" : "");
+	var sideX = fromBatterSide(p.x);
+	var horizontal = sideX < zone.left ? "inside" : (sideX > zone.right ? "outside" : "");
 	var close = p.locClass == "shadowOut" ? "just " : "";
 	if (vertical && horizontal) {
 		return close + vertical + " and " + horizontal;
@@ -828,7 +942,7 @@ function approachHint(id) {
 }
 
 function contactChance(swingType, p) {
-	var chance = CONTACT[swingType][p.locClass] + p.type.contact + batter.contact - pitcher.stuff + 0.04 * pitcherFatigue();
+	var chance = CONTACT[swingType][p.locClass] + p.type.contact + batter.contact + platoon().contact - pitcher.stuff + 0.04 * pitcherFatigue();
 	if (p.type.fastball) {
 		// Harder fastballs are harder to catch up to
 		chance -= (p.speed - 94) * 0.005;
@@ -909,7 +1023,7 @@ function chooseInPlay(swingType, p) {
 		return { play: Math.random() < 0.7 ? "buntOut" : "buntPop", kind: "bunt" };
 	}
 	var kind = pickBattedBall(swingType, p);
-	var power = 1 + batter.xbhShift * 0.02;
+	var power = (1 + batter.xbhShift * 0.02) * platoon().power;
 	if (swingType == "swingForTheFences") {
 		power *= 1.35;
 	} else if (swingType == "protectPlate") {
@@ -945,7 +1059,7 @@ function chooseInPlay(swingType, p) {
 		return { play: "lineOut", kind: kind };
 	}
 	if (kind == "fb") {
-		return { play: Math.random() < 0.5 + batter.xbhShift * 0.01 ? "deepFly" : "shallowFly", kind: kind };
+		return { play: Math.random() < 0.5 + (batter.xbhShift + platoon().xbhShift) * 0.01 ? "deepFly" : "shallowFly", kind: kind };
 	}
 	return { play: Math.random() < 0.4 ? "foulOut" : "popOut", kind: kind };
 }
@@ -1065,6 +1179,27 @@ function startGame() {
 	gameContentArea.innerHTML = "";
 	swingOptionsArea.innerHTML = "";
 	addParagraph("Choose your batter for this at-bat.", "situation");
+	var handChoice = document.createElement("fieldset");
+	handChoice.id = "handChoice";
+	var legend = document.createElement("legend");
+	legend.textContent = "Bats";
+	handChoice.appendChild(legend);
+	batterHands.forEach(function(hand) {
+		var button = document.createElement("button");
+		button.className = "handOption";
+		button.type = "button";
+		button.textContent = hand.label;
+		button.setAttribute("aria-pressed", hand.id == batterHandChoice ? "true" : "false");
+		button.addEventListener("click", function() {
+			setBatterHandChoice(hand.id);
+			var options = handChoice.querySelectorAll(".handOption");
+			for (var i = 0; i < options.length; i++) {
+				options[i].setAttribute("aria-pressed", options[i] == button ? "true" : "false");
+			}
+		});
+		handChoice.appendChild(button);
+	});
+	gameContentArea.appendChild(handChoice);
 	var choices = document.createElement("div");
 	choices.id = "batterChoices";
 	batterTypes.forEach(function(type) {
@@ -1093,12 +1228,15 @@ function beginAtBat(typeId) {
 	resetAtBat();
 	generateSituation();
 	pitcher = generatePitcher();
+	batterHand = batterHandChoice == "S" ? (pitcher.hand == "L" ? "R" : "L") : batterHandChoice;
+	updateSilhouette();
 	pitcherPitchCount = startingPitchCount();
 	updateScoreboard();
 	updateMatchup();
 	gameContentArea.innerHTML = "";
 	addParagraph(situationText(), "situation");
 	addParagraph(pitcher.name + " (" + pitcher.hand + "HP) is on the mound. " + scoutingText());
+	addParagraph((batterHandChoice == "S" ? "As a switch hitter, you step in from the " + handName(batterHand) + " side. " : "") + platoonText());
 	addParagraph("Step into the box. The pitcher is ready.");
 	throwPitch();
 }
@@ -1233,7 +1371,7 @@ function updateCount() {
 }
 
 function updateMatchup() {
-	batterTypeDisplay.textContent = batter.name;
+	batterTypeDisplay.textContent = batter.name + " · " + (batterHandChoice == "S" ? "Switch, batting " + handName(batterHand) : "Bats " + handName(batterHand));
 	pitcherNameDisplay.textContent = pitcher.name;
 	pitcherTypeDisplay.textContent = pitcher.role + " · " + (pitcher.hand == "L" ? "Left" : "Right") + "-handed · " + scoutingText();
 	var total = pitcher.mix.reduce(function(sum, entry) { return sum + entry.weight; }, 0);
@@ -1315,7 +1453,8 @@ function recordPitch(p, description, colorClass, options) {
 		previous.classList.remove("latest");
 	}
 	pitchTrailArea.innerHTML = "";
-	pitchTrailArea.appendChild(svgElement("line", { "class": "pitchPath", x1: RELEASE_POINT.x, y1: RELEASE_POINT.y, x2: p.x.toFixed(1), y2: p.y.toFixed(1) }));
+	var releaseX = 100 + (pitcher.hand == "L" ? RELEASE_POINT.offset : -RELEASE_POINT.offset);
+	pitchTrailArea.appendChild(svgElement("line", { "class": "pitchPath", x1: releaseX, y1: RELEASE_POINT.y, x2: p.x.toFixed(1), y2: p.y.toFixed(1) }));
 	var mark = svgElement("g", { "class": "pitchMark latest " + colorClass });
 	mark.appendChild(svgElement("circle", { cx: p.x.toFixed(1), cy: p.y.toFixed(1), r: 9 }));
 	var number = svgElement("text", { x: p.x.toFixed(1), y: (p.y + 3.5).toFixed(1) });
@@ -1442,7 +1581,7 @@ function addInPlay(swingType, p) {
 	var choice = chooseInPlay(swingType, p);
 	var play = choice.play;
 	var info = playInfo[play];
-	var result = randomItem(inPlayPools[play]);
+	var result = pickLanding(play);
 	var data = battedBallData(choice.kind, play);
 	var outsBefore = outs;
 	pitches = pitches + 1;
@@ -1546,4 +1685,15 @@ document.addEventListener("keydown", function(event) {
 });
 
 document.getElementById("recordPitches").textContent = RECORD_PITCHES;
+try {
+	var savedHand = localStorage.getItem("batterHand");
+	if (savedHand == "R" || savedHand == "L" || savedHand == "S") {
+		batterHandChoice = savedHand;
+		batterHand = savedHand == "S" ? "R" : savedHand;
+	}
+} catch (error) {
+	// Storage is unavailable; default to a right-handed batter
+}
+updateSilhouette();
+batterTypeDisplay.textContent = batterHandChoice == "S" ? "Switch hitter" : "Bats " + handName(batterHand);
 document.getElementById("startGame").addEventListener("click", startGame);
