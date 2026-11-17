@@ -64,6 +64,24 @@ Pitcher-to-pitcher spread (velocity SD of 2 mph, control SD of 2.5 points of zon
 | On-base percentage | about .315 | Sourced | StatMuse |
 | Plate appearances / pitches | 182,838 / 710,084 | Sourced | StatMuse, Baseball Savant |
 
+## Batting side and platoon splits
+
+The player picks a batter who bats right, left or switch. A switch hitter always bats from the side opposite the
+pitcher. A left-handed batter stands on the other side of the plate (the right side in the catcher's-view strike
+zone), so inside and outside calls, hit-by-pitch locations, where pitches that move away are aimed, and pull-side
+spray all mirror.
+
+| Constant | Value | Status | Source |
+|---|---|---|---|
+| Pitches thrown by left-handers | 28% | Approximate | |
+| Plate appearances with the platoon advantage | about 58% | Approximate | Used only to check that the splits below average out to about zero |
+| Contact vs. a same-sided / opposite-sided pitcher | -3.0 / +2.0 points | Approximate | Set so the gap is about 20 points of wOBA and 3 points of strikeout rate, the usual size of a platoon split; not checked against 2025 data |
+| Extra-base power vs. same / opposite side | x0.88 / x1.08 | Approximate | |
+| Breaking balls (slider, sweeper, curveball) vs. a same-sided hitter | +0.04 deception | Game mechanic | They break away from the hitter |
+| Changeups and splitters vs. an opposite-sided hitter | +0.03 deception | Game mechanic | They fade away from the hitter |
+| Breaking balls to a same-sided hitter, changeups and splitters to an opposite-sided hitter | 75% on the outer half | Approximate | Pitchers aim pitches that move away from the hitter at the outer half |
+| Spray: pull / center / opposite field weights | ground balls 1.6 / 1 / 0.6, home runs 2.5 / 1 / 0.5, other 1.15 / 1 / 0.9 | Approximate | Hitters pull most ground balls and home runs |
+
 ## Umpires
 
 | Constant | Value | Status | Source |
@@ -128,4 +146,4 @@ within a point or two.
 
 - The automated ball-strike challenge system. ESPN reports the 2026 zone rate fell to 47.2% from 50.7% in 2025,
   tied to automated ball-strike calls. The game models 2025's human umpires.
-- Platoon splits, ballparks and weather, and individual players.
+- Ballparks and weather, and individual players. Platoon splits are modeled only roughly (see above).

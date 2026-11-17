@@ -540,6 +540,40 @@ h3#swingOptionsHeading {
 	grid-template-columns: 1fr;
 }
 
+#handChoice {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	margin: 12px 0 0;
+	padding: 0;
+	border: 0;
+}
+
+#handChoice legend {
+	float: left;
+	margin-right: 4px;
+	padding: 0;
+	font-size: 0.85em;
+	color: var(--muted);
+}
+
+button.handOption {
+	display: inline-block;
+	width: auto;
+	padding: 0.35em 0.9em;
+	font-size: 0.9em;
+	background: var(--panel-raised);
+	color: var(--text);
+	border: 1px solid var(--border);
+}
+
+button.handOption[aria-pressed="true"] {
+	background: var(--in-play);
+	border-color: var(--in-play);
+	color: #fff;
+}
+
 button.swingOption,
 button.batterChoice {
 	display: flex;
