@@ -12,7 +12,6 @@
 	--out: #f5a524;
 	--runner: #f5c518;
 	--link: #7cb7ff;
-	--silhouette: #3a4b5f;
 }
 
 *,
@@ -264,24 +263,8 @@ main#game {
 #strikeZone {
 	display: block;
 	width: 100%;
-	max-width: 300px;
+	max-width: 240px;
 	margin: 0 auto;
-}
-
-.batterSilhouette {
-	fill: var(--silhouette);
-	transition: transform 0.3s ease;
-}
-
-/* A left-handed batter stands on the other side of the plate: mirror around the plate's center (x = 100) */
-.batterSilhouette.leftHanded {
-	transform: translate(200px, 0) scale(-1, 1);
-}
-
-@media (prefers-reduced-motion: reduce) {
-	.batterSilhouette {
-		transition: none;
-	}
 }
 
 .zoneBox {

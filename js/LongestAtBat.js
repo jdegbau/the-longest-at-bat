@@ -71,7 +71,6 @@ var hitPanel = document.getElementById("hitPanel");
 var hitMarksArea = document.getElementById("hitMarks");
 var hitInfoDisplay = document.getElementById("hitInfo");
 var strikeZoneDisplay = document.getElementById("strikeZone");
-var batterSilhouette = document.getElementById("batterSilhouette");
 var svgNamespace = "http://www.w3.org/2000/svg";
 
 // Batter types. contact shifts the chance of making contact, xbhShift trades singles for extra-base hits,
@@ -715,9 +714,8 @@ function platoonText() {
 	return matchup + "you'll see the ball well out of the hand. You have the platoon advantage.";
 }
 
-// Show the batter on the correct side of the plate in the strike zone view
-function updateSilhouette() {
-	batterSilhouette.classList.toggle("leftHanded", batterHand == "L");
+// Tell screen readers which side of the plate the batter is on in the strike zone view
+function updateZoneLabel() {
 	strikeZoneDisplay.setAttribute("aria-label", "Pitch locations from the catcher's view, " + handName(batterHand) + "-handed batter");
 }
 
@@ -731,7 +729,7 @@ function setBatterHandChoice(choice) {
 	} catch (error) {
 		// Storage is unavailable; the choice still applies to this visit
 	}
-	updateSilhouette();
+	updateZoneLabel();
 	if (!atBatActive) {
 		batterTypeDisplay.textContent = choice == "S" ? "Switch hitter" : "Bats " + handName(batterHand);
 	}
@@ -839,7 +837,7 @@ function locationFor(locClass) {
 	var x;
 	var y;
 	if (locClass == "hbp") {
-		return { x: fromBatterSide(randomBetween(-4, 20)), y: randomBetween(80, 150) };
+		return { x: fromBatterSide(randomBetween(12, 30)), y: randomBetween(80, 150) };
 	}
 	var area = { heart: heart, edge: zone, shadowOut: shadowBox, chase: chaseBox, waste: plotBox }[locClass];
 	do {
@@ -1229,7 +1227,7 @@ function beginAtBat(typeId) {
 	generateSituation();
 	pitcher = generatePitcher();
 	batterHand = batterHandChoice == "S" ? (pitcher.hand == "L" ? "R" : "L") : batterHandChoice;
-	updateSilhouette();
+	updateZoneLabel();
 	pitcherPitchCount = startingPitchCount();
 	updateScoreboard();
 	updateMatchup();
@@ -1694,6 +1692,6 @@ try {
 } catch (error) {
 	// Storage is unavailable; default to a right-handed batter
 }
-updateSilhouette();
+updateZoneLabel();
 batterTypeDisplay.textContent = batterHandChoice == "S" ? "Switch hitter" : "Bats " + handName(batterHand);
 document.getElementById("startGame").addEventListener("click", startGame);
