@@ -91,16 +91,18 @@ var LEFTY_PITCHER_SHARE = 0.28; // Share of pitches thrown by left-handers
 
 // Platoon splits: hitters do better against pitchers who throw from the other side. contact shifts the chance of
 // making contact, power scales home runs and extra-base hits, and deception is added to breaking balls that break
-// away from a same-sided hitter. About 58% of MLB plate appearances have the platoon advantage, and at that mix the
-// two sides average out to about zero.
+// away from a same-sided hitter. The gap is set to about 20 points of wOBA and 3 points of strikeout rate, the usual
+// size of a platoon split. About 58% of MLB plate appearances have the platoon advantage, and at that mix the two
+// sides average out to about zero.
 var PLATOON = {
-	same: { contact: -0.015, power: 0.93, xbhShift: -2 },
-	opposite: { contact: 0.01, power: 1.05, xbhShift: 1 }
+	same: { contact: -0.03, power: 0.88, xbhShift: -2 },
+	opposite: { contact: 0.02, power: 1.08, xbhShift: 1 }
 };
 var SAME_SIDE_BREAKING_DECEPTION = 0.04; // Sliders, sweepers and curveballs break away from a same-sided hitter
 var OPPOSITE_SIDE_CHANGEUP_DECEPTION = 0.03; // Changeups and splitters fade away from an opposite-sided hitter
 var BREAKING_BALLS = ["Slider", "Sweeper", "Curveball"];
 var OFFSPEED = ["Changeup", "Splitter"];
+var AWAY_PITCH_SHARE = 0.75; // How often those pitches end up on the outer half rather than the inner half
 
 // Where balls in play go. Hitters pull ground balls and home runs; line drives and fly balls spread out more.
 var SPRAY_WEIGHTS = {
@@ -706,6 +708,19 @@ function platoonDeception(type) {
 	return 0;
 }
 
+// Pitchers start the pitches that move away from a hitter on the outer half
+function movesAway(type) {
+	return platoonDeception(type) > 0;
+}
+
+function aimAway(location, type) {
+	var awayChance = (AWAY_PITCH_SHARE - 0.5) / 0.5; // Mirror enough inner-half pitches to reach the away share
+	if (movesAway(type) && fromBatterSide(location.x) < 100 && Math.random() < awayChance) {
+		return { x: 200 - location.x, y: location.y };
+	}
+	return location;
+}
+
 function platoonText() {
 	var matchup = (batterHand == "L" ? "Lefty" : "Righty") + " vs. " + (pitcher.hand == "L" ? "lefty" : "righty") + ": ";
 	if (sameSide()) {
@@ -751,7 +766,7 @@ function pickLanding(play) {
 }
 
 function foulNarrative() {
-	var text = foulNarrative();
+	var text = randomItem(foulNarratives);
 	return batterHand == "L" ? text.replace("left field line", "right field line") : text;
 }
 
@@ -1243,7 +1258,7 @@ function beginAtBat(typeId) {
 function throwPitch() {
 	var type = randomWeighted(pitcher.mix).type;
 	var locClass = pickLocationClass();
-	var location = locationFor(locClass);
+	var location = locClass == "hbp" ? locationFor(locClass) : aimAway(locationFor(locClass), type);
 	currentPitch = {
 		type: type,
 		speed: type.mean + pitcher.velo + randomNormal(0, 1.3) - 1.5 * pitcherFatigue(),
@@ -1570,7 +1585,7 @@ function addFoul(swingType, p) {
 	}
 	recordPitch(p, swingType == "bunt" ? "Foul Bunt" : "Foul", "strikeColor");
 	updateCount();
-	var narrative = swingType == "bunt" ? "Your bunt rolled foul." : (Math.random() < 0.4 ? "You got just enough of a " + pitchTypeName(p) + " to foul it off." : randomItem(foulNarratives));
+	var narrative = swingType == "bunt" ? "Your bunt rolled foul." : (Math.random() < 0.4 ? "You got just enough of a " + pitchTypeName(p) + " to foul it off." : foulNarrative());
 	showPitch("Foul!", narrative, [[commentary(), "ticker"]]);
 	nextPitch();
 }
